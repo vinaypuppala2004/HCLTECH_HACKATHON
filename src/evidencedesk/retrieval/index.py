@@ -16,7 +16,6 @@ from evidencedesk.contracts.models import (
     Document,
     EmbeddingInput,
     Envelope,
-    Hit,
     IngestItem,
     IngestResult,
     Passage,
@@ -27,13 +26,19 @@ from evidencedesk.contracts.models import (
     SourcesResult,
 )
 from evidencedesk.core.responses import failure, success
+from evidencedesk.retrieval.bm25 import BM25Corpus, reciprocal_rank_fusion
+from evidencedesk.retrieval.hybrid import (
+    Evidence,
+    make_hit,
+    matches_scope,
+    select_version_counterparts,
+)
 from evidencedesk.retrieval.projection import CompactEmbeddings
 
 _POINTS = "evidencedesk_passages_v1"
 _STATE = "evidencedesk_state_v1"
 _STATE_ID = str(uuid5(NAMESPACE_URL, "evidencedesk/committed-state/v1"))
 _LOG = logging.getLogger(__name__)
-_WARNINGS = ["Semantic-only search; BM25 fusion and version counterparts are not implemented."]
 
 
 class _StoredDocument(Contract):
@@ -63,6 +68,9 @@ class QdrantIndex:
         self._lock = RLock()
         self._closed = False
         self._unhealthy = False
+        self._corpus_revision = -1
+        self._evidence: dict[str, Evidence] = {}
+        self._lexical: BM25Corpus | None = None
         self._client = QdrantClient(path=str(path))
         try:
             self._state = self._open_state()
@@ -184,6 +192,7 @@ class QdrantIndex:
                 self._client.upsert(_POINTS, points=points, wait=True)
                 self._save_state(updated)
                 self._state = updated
+                self._corpus_revision = -1
             except Exception:
                 self._unhealthy = True
                 _LOG.exception("Qdrant write failed; close and reopen before using the index.")
@@ -192,6 +201,7 @@ class QdrantIndex:
             return self._receipt(document, "ready")
 
     def search(self, request: QueryInput) -> Envelope[SearchResult]:
+        """Fuse scope-filtered BM25 and Nomic rankings, then add version comparisons."""
         with self._lock:
             if not self.ready:
                 return self._unavailable()
@@ -200,8 +210,24 @@ class QdrantIndex:
             generations = self._generations(request.context)
             if not generations:
                 return success(
-                    SearchResult(index_revision=self.index_revision, hits=[], warnings=_WARNINGS)
+                    SearchResult(
+                        index_revision=self.index_revision,
+                        hits=[],
+                        warnings=["No committed passages match the selected scope."],
+                    )
                 )
+            try:
+                self._ensure_corpus()
+                eligible = {
+                    passage_id
+                    for passage_id, evidence in self._evidence.items()
+                    if matches_scope(evidence.document, request.context)
+                }
+                if not eligible:
+                    raise ValueError("Committed document metadata has no corresponding passages.")
+            except Exception:
+                _LOG.exception("The committed retrieval corpus could not be loaded.")
+                return failure("INTERNAL_ERROR", "Committed retrieval data could not be loaded.")
             response = self._embedder(EmbeddingInput(texts=[request.question], kind="query"))
             if not response.ok or response.data is None:
                 return response
@@ -214,29 +240,112 @@ class QdrantIndex:
                     _POINTS,
                     query=response.data.vectors[0],
                     query_filter=self._generation_filter(generations),
-                    limit=6,
+                    limit=len(eligible),
                     with_payload=True,
                 )
-                hits = [
-                    Hit(
-                        document=Document.model_validate(point.payload["document"]),
-                        passage=Passage.model_validate(point.payload["passage"]),
-                        rank=rank,
-                        bm25_score=None,
-                        cosine_score=point.score,
-                        rrf_score=0.0,
-                        selection="ranked",
-                        applicable=True,
-                    )
-                    for rank, point in enumerate(result.points, start=1)
-                ]
-                return success(
-                    SearchResult(index_revision=self.index_revision, hits=hits, warnings=_WARNINGS)
+                semantic_scores = {}
+                for point in result.points:
+                    passage_id = point.payload["passage"]["passage_id"]
+                    if passage_id not in eligible or passage_id in semantic_scores:
+                        raise ValueError("Unexpected or duplicate semantic search passage.")
+                    semantic_scores[passage_id] = point.score
+                if set(semantic_scores) != eligible:
+                    raise ValueError("Semantic results do not cover the committed scoped passages.")
+                lexical_scores = self._lexical.scores(request.question, eligible)
+                return self._compose_result(request, lexical_scores, semantic_scores)
+            except Exception:
+                _LOG.exception("Hybrid retrieval failed.")
+                return failure(
+                    "INTERNAL_ERROR", "Hybrid search failed; inspect and reopen the index."
+                )
+
+    def search_lexical(self, request: QueryInput) -> Envelope[SearchResult]:
+        """Explicit BM25-only port; hybrid search never silently downgrades to this."""
+        with self._lock:
+            if not self.ready:
+                return self._unavailable()
+            if not self._state.documents:
+                return failure("INDEX_EMPTY", "No documents have been committed to the index.")
+            try:
+                self._ensure_corpus()
+                eligible = {
+                    passage_id
+                    for passage_id, evidence in self._evidence.items()
+                    if matches_scope(evidence.document, request.context)
+                }
+                if not eligible:
+                    return success(SearchResult(
+                        index_revision=self.index_revision,
+                        hits=[],
+                        warnings=["No committed passages match the selected scope."],
+                    ))
+                return self._compose_result(
+                    request,
+                    self._lexical.scores(request.question, eligible),
+                    {},
+                    warnings=["BM25-only retrieval was explicitly selected; semantic ranking was not used."],
                 )
             except Exception:
-                return failure(
-                    "INTERNAL_ERROR", "Qdrant search failed; inspect and reopen the index."
-                )
+                _LOG.exception("Lexical retrieval failed.")
+                return failure("INTERNAL_ERROR", "BM25 search failed; inspect and reopen the index.")
+
+    def _compose_result(
+        self,
+        request: QueryInput,
+        lexical_scores: dict[str, float],
+        semantic_scores: dict[str, float],
+        *,
+        warnings: list[str] | None = None,
+    ) -> Envelope[SearchResult]:
+        ranking = reciprocal_rank_fusion(lexical_scores, semantic_scores)
+        ranked = [
+            make_hit(
+                self._evidence[passage_id],
+                rank=rank,
+                bm25_score=lexical_scores.get(passage_id, 0.0),
+                cosine_score=semantic_scores.get(passage_id),
+                rrf_score=score,
+                scope=request.context,
+            )
+            for rank, (passage_id, score) in enumerate(ranking, start=1)
+        ]
+        hits, comparison_warnings = select_version_counterparts(ranked, self._evidence, request)
+        messages = list(warnings or [])
+        messages.extend(comparison_warnings)
+        if not any(score > 0 for score in lexical_scores.values()):
+            messages.append("No lexical matches were found in the selected scope.")
+        return success(SearchResult(
+            index_revision=self.index_revision, hits=hits, warnings=messages
+        ))
+
+    def _ensure_corpus(self) -> None:
+        if self._corpus_revision == self.index_revision and self._lexical is not None:
+            return
+        corpus: dict[str, Evidence] = {}
+        records = self._scroll(self._generation_filter(self._generations()))
+        for point in records:
+            document = Document.model_validate(point.payload["document"])
+            passage = Passage.model_validate(point.payload["passage"])
+            entry = self._state.documents.get(document.document_id)
+            if (
+                entry is None
+                or point.payload["generation"] != entry.generation
+                or document != entry.document
+                or passage.document_id != document.document_id
+                or passage.passage_id not in entry.passage_ids
+                or passage.passage_id in corpus
+            ):
+                raise ValueError("Stored passages do not match the committed corpus.")
+            corpus[passage.passage_id] = Evidence(document=document, passage=passage)
+        expected = sum(entry.document.passage_count for entry in self._state.documents.values())
+        if len(corpus) != expected:
+            raise ValueError("Committed corpus passage counts do not match.")
+        lexical = BM25Corpus({
+            passage_id: evidence.lexical_text for passage_id, evidence in corpus.items()
+        })
+        self._evidence = corpus
+        self._lexical = lexical
+        self._corpus_revision = self.index_revision
 
     def read_sources(self, request: SourcesInput) -> Envelope[SourcesResult]:
         with self._lock:
@@ -352,22 +461,11 @@ class QdrantIndex:
                 raise ValueError("Stored evidence does not match the committed document.")
 
     def _generations(self, scope: Scope | None = None) -> list[str]:
-        result = []
-        for entry in self._state.documents.values():
-            metadata = entry.document.metadata
-            if scope is not None and any(
-                wanted is not None
-                and (
-                    (actual.casefold() if actual is not None else None) != wanted.casefold()
-                    if field != "version"
-                    else actual != wanted
-                )
-                for field in ("product", "version", "environment")
-                for actual, wanted in [(getattr(metadata, field), getattr(scope, field))]
-            ):
-                continue
-            result.append(entry.generation)
-        return result
+        return [
+            entry.generation
+            for entry in self._state.documents.values()
+            if scope is None or matches_scope(entry.document, scope)
+        ]
 
     @staticmethod
     def _generation_filter(generations: list[str]) -> models.Filter:

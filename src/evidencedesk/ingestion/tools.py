@@ -1,4 +1,4 @@
-"""Ingestion stubs: uploads are explicitly not persisted or indexed."""
+"""Mock tools and opt-in upload validation; neither persists or indexes uploads."""
 
 from evidencedesk.contracts.models import (
     Envelope,
@@ -10,6 +10,7 @@ from evidencedesk.contracts.models import (
     ToolError,
 )
 from evidencedesk.core.responses import failure, success
+from evidencedesk.ingestion.batching import prepare_uploads
 from evidencedesk.mocks.fixtures import mock_hit
 
 
@@ -43,5 +44,40 @@ def read_sources(request: SourcesInput) -> Envelope[SourcesResult]:
         SourcesResult(
             documents=[hit.document],
             passages=[hit.passage] if request.document_id else [],
+        )
+    )
+
+
+def validate_documents(request: IngestInput) -> Envelope[IngestResult]:
+    """An opt-in IngestTool implementation for B4 validation, without an index.
+
+    Invalid files retain their preparation error. Valid files are rejected with
+    NOT_IMPLEMENTED until C provides the agreed indexing port. Index revision is
+    zero, and no rejected file is assigned an indexed ID or passage count. The
+    default mock factory continues to use ingest_documents above.
+    """
+    batch = prepare_uploads(request)
+    return success(
+        IngestResult(
+            index_revision=0,
+            results=[
+                IngestItem(
+                    filename=upload.filename,
+                    state="rejected",
+                    document_id=None,
+                    passage_count=0,
+                    error=(
+                        upload.value
+                        if isinstance(upload.value, ToolError)
+                        else ToolError(
+                            code="NOT_IMPLEMENTED",
+                            message="Validated and chunked; indexing port is not connected. "
+                            "Nothing was indexed.",
+                            retryable=False,
+                        )
+                    ),
+                )
+                for upload in batch.uploads
+            ],
         )
     )

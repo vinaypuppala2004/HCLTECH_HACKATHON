@@ -85,11 +85,11 @@ All questions currently return that same fixture; the full script is future work
 
 ## Person A — Frontend — edit only this section
 - [x] Streamlit chat sends HTTP requests and displays replies/evidence.
-- [ ] A1: Add upload controls and source browsing using the frozen API.
-- [ ] A2: Add product/version/environment controls and side-by-side conflicts.
-- [ ] A3: Show claim citations, fallback states, and clear service errors.
-- [ ] A4: Preserve session history without repeating requests on rerun.
-- [ ] A5: Finish frontend checks, README, and panel-facing demo presentation.
+- [x] A1: Add upload controls and source browsing using the frozen API.
+- [x] A2: Add product/version/environment controls and side-by-side conflicts.
+- [x] A3: Show claim citations, fallback states, and clear service errors.
+- [x] A4: Preserve session history without repeating requests on rerun.
+- [x] A5: Finish frontend checks, README, and panel-facing demo presentation.
 
 Acceptance: UI states work against mocks and live responses without hidden fallback.
 Progress: `progress/member-a.md`.
@@ -97,10 +97,24 @@ Progress: `progress/member-a.md`.
 ## Person B — Chunking — edit only this section
 - [x] Ingestion/source-reader stubs and owned folders exist.
 - [ ] B1: Curate public sources and provenance; label synthetic fixtures.
-- [ ] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
-- [ ] B3: Segment passages with headings, overlap, and stable source IDs.
+- [x] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
+- [x] B3: Segment passages with headings, overlap, and stable source IDs.
 - [ ] B4: Report empty/corrupt inputs; send passages to C's indexing port.
+  - [x] Add opt-in upload validation, strict base64/limits, and per-file errors.
+  - [ ] Connect C's agreed indexing port and verify actual committed results.
 - [ ] B5: Verify formats and deduplication; share source IDs with D for labels.
+
+Person B phases map directly to B1–B5 above. Phase 2 parsing is complete and
+preserves PDF pages, HTML/Markdown headings, and source line ranges. Phase 3 adds
+exact source slices with configurable character limits and overlap (defaults:
+1,200/200), deterministic document/passage IDs, and internal location records.
+Chunks never cross source blocks or pages. Output uses the existing contracts;
+default ingestion and source tools remain mocked. Phase 4's opt-in validator
+prepares files in memory and reports per-file errors using the existing envelope;
+valid files remain rejected/NOT_IMPLEMENTED until indexing is connected. At the
+user's direction, C's undefined indexing handoff stays pending and B4 is not
+complete. Phase 1 source curation and phase 5 deduplication/label handoff are also
+pending. Study checklists for phases 2–3 live in the owned ingestion folder.
 
 Acceptance: citation locations survive chunking; failed files never appear indexed.
 Progress: `progress/member-b.md`.
@@ -127,8 +141,8 @@ Progress: `progress/member-c.md`.
 ## Person D — FastAPI and evaluation — edit only this section
 - [x] FastAPI routes, configuration, dependency factory, and mock orchestration exist.
 - [x] One smoke test covers API/tool wiring, chat submission, and rerun behavior.
-- [ ] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
-- [ ] D2: Wire B/C tools through shared ports; manage startup and request concurrency.
+- [x] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
+- [x] D2: Wire B/C tools through shared ports; manage startup and request concurrency.
 - [ ] D3: Label 24 questions; freeze 8 held-out cases before tuning.
 - [ ] D4: Integrate Ragas with explicitly local model and embedding providers.
 - [ ] D5: Measure retrieval, faithfulness, citations, fallback, and latency.

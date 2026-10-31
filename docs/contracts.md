@@ -2,6 +2,8 @@
 
 Owner: Person C. Models: `src/evidencedesk/contracts/models.py`. Callable dependency
 ports: `src/evidencedesk/contracts/ports.py`. Ask C before changing shapes.
+Person D owns the FastAPI implementation and dependency wiring; C owns shared
+contracts and retrieval/answer tools. D integrates B/C tools through these ports.
 FastAPI exports the public schemas at `/openapi.json` and documents them at `/docs`.
 
 ## Conventions and envelope

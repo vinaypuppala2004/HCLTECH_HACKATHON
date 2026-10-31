@@ -1,19 +1,17 @@
 """Person A's Streamlit chat, calling the backend over HTTP."""
 
-import httpx
 import streamlit as st
+from answers import show_answer
 from conflicts import show_conflicts
 from documents import show_documents
+from query_client import QueryServiceError, request_query
 
-from evidencedesk.contracts.models import Envelope, QueryInput, QueryResult, Scope
+from evidencedesk.contracts.models import QueryInput, QueryResult, Scope
 from evidencedesk.core.settings import get_settings
 
 
 def show_reply(result: QueryResult, *, key_prefix: str) -> None:
-    for claim in result.result.claims:
-        st.write(claim.text)
-    if not result.result.claims:
-        st.write(result.result.fallback_reason or result.result.status)
+    show_answer(result)
     st.caption(f"Mode: {result.mode} | Evidence strength: {result.verification.evidence_strength}")
     show_conflicts(result, key_prefix=key_prefix)
     with st.expander("Supporting evidence"):
@@ -27,9 +25,12 @@ def show_reply(result: QueryResult, *, key_prefix: str) -> None:
 settings = get_settings()
 st.set_page_config(page_title="EvidenceDesk", page_icon="📚")
 st.title("EvidenceDesk")
-st.warning(
-    "MOCK MODE — every question returns the same sample passage. Live RAG is not implemented."
-)
+if settings.app_mode == "mock":
+    st.warning(
+        "MOCK MODE — every question returns the same sample passage. Live RAG is not implemented."
+    )
+else:
+    st.caption(f"Configured mode: {settings.app_mode}")
 st.caption('Try: "How do I reset my password?"')
 
 show_documents(settings.backend_url)
@@ -76,21 +77,15 @@ if question := st.chat_input("Ask about the documents", max_chars=2000):
                     environment=environment.strip() or None,
                 ),
             )
-            with st.spinner("Requesting a mock reply..."):
-                response = httpx.post(
-                    f"{settings.backend_url}/v1/query",
-                    json=payload.model_dump(),
-                    timeout=30,
-                    trust_env=False,
-                )
-                response.raise_for_status()
-                envelope = Envelope[QueryResult].model_validate(response.json())
-                if not envelope.ok or envelope.data is None:
-                    raise ValueError("The backend returned an unsuccessful response.")
-            result = envelope.data
+            with st.spinner("Requesting a reply..."):
+                result = request_query(settings.backend_url, payload)
             show_reply(result, key_prefix=f"reply_{len(st.session_state.messages)}")
             st.session_state.messages.append({"role": "assistant", "result": result.model_dump()})
-        except (httpx.HTTPError, ValueError) as exc:
-            text = f"Could not get a reply. Start the FastAPI backend and retry. Details: {exc}"
+        except (QueryServiceError, ValueError) as exc:
+            text = (
+                str(exc)
+                if isinstance(exc, QueryServiceError)
+                else "BAD_INPUT: Enter a question containing 1–2,000 non-whitespace characters."
+            )
             st.error(text)
             st.session_state.messages.append({"role": "assistant", "text": text})

@@ -1,11 +1,13 @@
 """Run with: python -m uvicorn evidencedesk.api.app:app --host 127.0.0.1."""
 
 import logging
+from contextlib import asynccontextmanager
 from time import perf_counter
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 
 from evidencedesk.contracts.models import (
@@ -26,6 +28,7 @@ from evidencedesk.contracts.models import (
 )
 from evidencedesk.core.factory import Tools, build_tools
 from evidencedesk.core.responses import failure, success
+from evidencedesk.core.runtime import BackendBusy, BackendRuntime
 from evidencedesk.core.settings import Settings, get_settings
 
 ERROR_STATUS = {
@@ -71,8 +74,30 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
     settings = settings or get_settings()
     if settings.app_mode != "mock":
         raise RuntimeError("Only APP_MODE=mock is implemented; live adapters are not ready.")
-    tools = tools or build_tools(settings)
-    application = FastAPI(title="EvidenceDesk mock API", version="0.1.0", responses=ERROR_RESPONSES)
+    backend = BackendRuntime(lambda: tools if tools is not None else build_tools(settings))
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        await run_in_threadpool(backend.start)
+        try:
+            yield
+        finally:
+            await run_in_threadpool(backend.stop)
+
+    application = FastAPI(
+        title="EvidenceDesk mock API",
+        version="0.1.0",
+        responses=ERROR_RESPONSES,
+        lifespan=lifespan,
+    )
+    application.state.backend = backend
+
+    @application.exception_handler(BackendBusy)
+    async def busy_backend(request: Request, exc: BackendBusy):
+        return JSONResponse(
+            status_code=ERROR_STATUS["BUSY"],
+            content=failure("BUSY", str(exc), retryable=True).model_dump(),
+        )
 
     @application.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError):
@@ -118,7 +143,7 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
         return success(
             Health(
                 mode="mock",
-                ready=True,
+                ready=backend.ready,
                 ollama_available=False,
                 generation_model=settings.generation_model,
                 embedding_model=settings.embedding_model,
@@ -129,53 +154,57 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.post("/v1/documents:ingest", response_model=Envelope[IngestResult])
     def ingest(request: IngestInput):
-        result = tools.ingest(request)
-        unwrap(result)
-        return result
+        with backend.request() as active_tools:
+            result = active_tools.ingest(request)
+            unwrap(result)
+            return result
 
     @application.post("/v1/sources:read", response_model=Envelope[SourcesResult])
     def sources(request: SourcesInput):
-        result = tools.sources(request)
-        unwrap(result)
-        return result
+        with backend.request() as active_tools:
+            result = active_tools.sources(request)
+            unwrap(result)
+            return result
 
     @application.post("/v1/search", response_model=Envelope[SearchResult])
     def search(request: QueryInput):
-        result = tools.search(request)
-        unwrap(result)
-        return result
+        with backend.request() as active_tools:
+            result = active_tools.search(request)
+            unwrap(result)
+            return result
 
     @application.post("/v1/query", response_model=Envelope[QueryResult])
     def query(request: QueryInput):
-        trace = []
-        started = perf_counter()
-        retrieval = unwrap(tools.search(request))
-        trace.append(_step("retrieve", started))
-        started = perf_counter()
-        draft = unwrap(tools.draft(DraftInput(query=request, retrieval=retrieval)))
-        trace.append(_step("draft", started))
-        started = perf_counter()
-        verification = unwrap(
-            tools.verify(VerifyInput(query=request, retrieval=retrieval, draft=draft))
-        )
-        trace.append(_step("verify", started))
-        if draft.claims and not verification.passed:
-            draft = Draft(
-                status="insufficient_evidence",
-                claims=[],
-                conflicts=[],
-                clarification=None,
-                fallback_reason="failed_verification",
+        with backend.request() as active_tools:
+            trace = []
+            started = perf_counter()
+            retrieval = unwrap(active_tools.search(request))
+            trace.append(_step("retrieve", started))
+            started = perf_counter()
+            draft = unwrap(active_tools.draft(DraftInput(query=request, retrieval=retrieval)))
+            trace.append(_step("draft", started))
+            started = perf_counter()
+            verification = unwrap(
+                active_tools.verify(VerifyInput(query=request, retrieval=retrieval, draft=draft))
             )
-        return success(
-            QueryResult(
-                mode="mock",
-                result=draft,
-                retrieval=retrieval,
-                verification=verification,
-                trace=trace,
+            trace.append(_step("verify", started))
+            if draft.claims and not verification.passed:
+                draft = Draft(
+                    status="insufficient_evidence",
+                    claims=[],
+                    conflicts=[],
+                    clarification=None,
+                    fallback_reason="failed_verification",
+                )
+            return success(
+                QueryResult(
+                    mode="mock",
+                    result=draft,
+                    retrieval=retrieval,
+                    verification=verification,
+                    trace=trace,
+                )
             )
-        )
 
     return application
 

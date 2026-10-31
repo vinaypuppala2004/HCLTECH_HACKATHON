@@ -8,9 +8,10 @@ conflicting versions, and asks for missing context or declines when support is
 insufficient. The centerpiece is side-by-side evidence and explicit version selection.
 
 Architecture: Streamlit → FastAPI → retrieval → draft → verification → cited reply.
-Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → BM25 retrieval.
-Use only `qwen3:4b` for model calls. Semantic retrieval and Qdrant vector indexing
-remain pending because the current local Qwen configuration does not support embeddings.
+Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → BM25 and
+semantic retrieval. Use only `qwen3:4b` for model calls. An isolated embedding-mode
+runner now produces raw Qwen vectors; Qdrant indexing and retrieval evaluation
+remain pending. Combine ranked results through reciprocal rank fusion.
 
 ### Tech stack
 | Component | Choice | Skeleton status |
@@ -18,7 +19,7 @@ remain pending because the current local Qwen configuration does not support emb
 | Interface | Streamlit | HTTP-backed mock chat |
 | Backend | Python / FastAPI / Pydantic | Typed routes and tool wiring |
 | Generation | Ollama `qwen3:4b` | Planned; no inference |
-| Embeddings | Only `qwen3:4b` allowed | Local capability check fails explicitly |
+| Embeddings | `qwen3:4b`, raw last-token pooling | Live adapter verified; API still mock |
 | Vector storage | Qdrant local persistent directory | Planned; no database |
 | Retrieval | BM25 first; semantic search pending | One fixed fixture |
 | Evaluation | Ragas with local Ollama and labelled checks | Planned; no scores |
@@ -106,8 +107,9 @@ Progress: `progress/member-b.md`.
 - [x] Shared contracts, ports, and mock fixtures exist.
 - [x] Retrieval, drafting, and verification stubs exist.
 - [ ] C1: Add local embeddings and backend-owned Qdrant persistence.
-  - [x] Enforce `qwen3:4b` only and reject unsupported embedding capabilities explicitly.
-  - [ ] Verify successful Qwen embeddings; current local setup returns HTTP 501.
+  - [x] Enforce `qwen3:4b` only; validate real endpoint output and report runner setup errors.
+  - [x] Verify 2560-dimensional Qwen vectors using a separate embedding-only runner.
+  - [ ] Evaluate retrieval quality of the raw last-token profile with D.
   - [ ] Persist passage vectors in Qdrant and verify restart.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
   - [ ] Start with BM25 lexical retrieval under the single-model policy.

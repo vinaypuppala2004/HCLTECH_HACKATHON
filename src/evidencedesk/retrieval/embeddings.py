@@ -40,7 +40,7 @@ class _ModelDetails(BaseModel):
 
 
 class OllamaEmbeddings:
-    """Use only qwen3:4b; reject servers that cannot embed with this model.
+    """Use only qwen3:4b against a configured embedding-mode Ollama runner.
 
     The client supplies the Ollama base URL and timeout. Pass the same request_lock
     to future generation adapters to share the single-model request limit.
@@ -65,12 +65,8 @@ class OllamaEmbeddings:
             response = self._client.post("/api/show", json={"model": EMBEDDING_MODEL})
             response.raise_for_status()
             details = _ModelDetails.model_validate(response.json())
-            if "embedding" not in details.capabilities:
-                return failure(
-                    "EMBEDDING_UNAVAILABLE",
-                    "Only qwen3:4b is allowed; this model has no advertised embedding support. "
-                    "Use lexical retrieval; no alternative model will be called.",
-                )
+            # /api/show describes the model file, not runtime flags. A separate
+            # runner can enable raw Qwen embeddings without changing this list.
             architecture = details.model_info.get("general.architecture")
             dimensions = details.model_info.get(f"{architecture}.embedding_length")
             if type(dimensions) is not int or dimensions < 1:
@@ -81,6 +77,8 @@ class OllamaEmbeddings:
                     "model": EMBEDDING_MODEL,
                     "input": request.texts,
                     "truncate": False,
+                    "keep_alive": "1m",
+                    "options": {"num_ctx": 1024, "num_batch": 64, "num_gpu": 0},
                 },
             )
             response.raise_for_status()
@@ -123,7 +121,9 @@ class OllamaEmbeddings:
             if status == 501:
                 return failure(
                     "EMBEDDING_UNAVAILABLE",
-                    "Ollama cannot embed with qwen3:4b in the current configuration.",
+                    "The Qwen runner is not in embedding mode. Start "
+                    "python -m evidencedesk.retrieval.embedding_server and use "
+                    "http://127.0.0.1:11435 for the embedding client.",
                 )
             return failure(
                 "EMBEDDING_UNAVAILABLE",

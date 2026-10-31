@@ -1,69 +1,98 @@
-# Qwen-only embedding policy — Person C
+# Qwen embeddings: runner setup and verification
 
-The user requires **only `qwen3:4b`** for model calls. The embedding adapter is
-locked to this model and never downloads or substitutes an alternative model.
-The earlier Nomic adapter is superseded by this policy.
+Only **`qwen3:4b`** is used. The adapter does not download, substitute, or call
+another model. Raw Qwen embeddings now work through an isolated local Ollama
+process, while the regular Ollama process continues to handle generation.
 
-## What the local check showed
+## Why the earlier request failed
 
-On 2026-10-31, `/api/show` for the installed Qwen model reported capabilities
-`completion`, `tools`, and `thinking`. It did not advertise `embedding`.
-A direct `/api/embed` request using `qwen3:4b` returned HTTP 501 with the message
-"This server does not support embeddings. Start it with `--embeddings`".
+The installed Ollama 0.40.13 starts this model's default runner in generation
+mode because its GGUF metadata has no pooling setting. `/api/embed` on that
+runner returned HTTP 501 asking for embedding mode. The adapter also rejected
+the model too early based on its `/api/show` capability list.
 
-Its metadata also reports `qwen3.embedding_length=2560`. That is an internal
-model dimension; this value alone does not demonstrate a working embedding API.
-The previous 768-dimensional Nomic vectors do not count as Qwen embeddings and
-must not be indexed or reused under this policy.
+The fix starts another process with `LLAMA_ARG_EMBEDDINGS=1` and
+`LLAMA_ARG_POOLING=last`. These are process-scoped settings: the existing chat
+server and its configuration are not modified. Capability metadata still lists
+`completion`, `tools`, and `thinking`, so the adapter now validates actual endpoint
+output instead of treating a missing `embedding` label as conclusive.
 
-The adapter therefore returns `EMBEDDING_UNAVAILABLE` on the current setup.
-It checks capabilities before attempting `/api/embed`, so it does not send
-unsupported requests or silently call another installed model.
+Sources: [Ollama 0.40.13 runner startup and inherited environment](https://github.com/ollama/ollama/blob/v0.40.13/llm/llama_server.go),
+[llama.cpp embedding and pooling settings](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
 
-## How retrieval can work with one model
+## Start the embedding process
 
-BM25 ranks passages using their words and term frequencies. It does not call
-an embedding model. Once lexical retrieval is implemented, `qwen3:4b` can write
-an answer from the retrieved passages, and the verifier can check citations.
+Keep your regular Ollama service running. From the Person C worktree, start a
+second terminal with:
 
-This is the next implementation step. Current API search and drafting remain
-explicitly labelled mocks. Semantic ranking, Qdrant vector indexing, and Ragas
-metrics requiring an embedding provider remain pending.
+```powershell
+.\.venv\Scripts\python.exe -m evidencedesk.retrieval.embedding_server
+```
 
-## Adapter behavior and handoff to Person D
+On Linux/macOS use `.venv/bin/python`. If Ollama is not found, supply
+`--ollama` with the installed executable's path. `--port` can select another
+unprivileged loopback port except the standard chat port 11434.
 
-`retrieval.embeddings.OllamaEmbeddings` still implements `EmbeddingPort` and uses
-a caller-owned `httpx.Client` and shared request lock. Its model is hardcoded to
-`qwen3:4b`; no model argument or settings value can redirect it to another model.
+| Purpose | URL | Model |
+|---|---|---|
+| Generation | `http://127.0.0.1:11434` | `qwen3:4b` |
+| Raw embeddings | `http://127.0.0.1:11435` | `qwen3:4b` |
 
-The adapter validates input, obtains the required model's digest from `/api/tags`,
-then checks `/api/show`. Without the `embedding` capability it returns an explicit,
-nonretryable error and releases the lock. If a future Qwen configuration advertises
-embedding support, its declared architecture and embedding length determine the
-required vector size. Inputs are sent unchanged for both query and document kinds;
-Nomic-specific task prefixes are not used.
+The launcher uses existing model storage, binds only loopback, refuses an occupied
+port, and downloads no weights. Stop a foreground launcher with Ctrl+C. The adapter
+uses CPU for embeddings to avoid consuming the generation model's GPU allocation.
+It requests context 1024, batch 64, `truncate=false`, and one-minute keepalive.
+Oversized passages must be split; they are not silently shortened.
 
-The remaining checks still reject wrong models, invalid dimensions, numeric strings,
-booleans, nonfinite or zero vectors, wrong vector counts, and changing model digests.
-Timeouts, connection errors, and busy locks retain their existing envelopes.
-HTTP 501 is a nonretryable `EMBEDDING_UNAVAILABLE` error.
+## Use the adapter
 
-`.env.example` now sets both model fields to `qwen3:4b`. D owns
-`core/settings.py` and must also update its two legacy embedding-model defaults.
-Those defaults are not model calls, but the mock health endpoint can still display
-the old name if no environment override is supplied. C has not edited D's files.
-No existing `.env` was overwritten.
+```python
+import httpx
 
-## Tests and limitations
+from evidencedesk.contracts.models import EmbeddingInput
+from evidencedesk.retrieval.embeddings import OllamaEmbeddings
 
-HTTP simulations test both the unsupported-capability path and vector validation.
-The success-path tests deliberately supply **synthetic** capability metadata and
-small vectors; they do not claim that the installed Qwen model can embed.
-A regression test includes an alternative installed embedding model and verifies
-that it is never selected.
+with httpx.Client(base_url="http://127.0.0.1:11435", timeout=180, trust_env=False) as client:
+    embed = OllamaEmbeddings(client)
+    response = embed(EmbeddingInput(texts=["Reset my password"], kind="query"))
+    if response.ok:
+        assert response.data.model == "qwen3:4b"
+        assert response.data.dimensions == 2560
+        vector = response.data.vectors[0]
+```
 
-No successful Qwen embedding inference has been demonstrated. Local weights
-downloaded for the superseded Nomic experiment have not been deleted; the new
-adapter does not invoke them.
+Queries and documents use unchanged text and the same pooling profile. The adapter
+requires finite, nonzero vectors with the model's declared dimensions, one per
+input in order. It checks the model name and digest, rejects digest changes during
+a call, and retains explicit errors and shared request locking. An unconfigured
+runner's HTTP 501 now includes the launcher command and embedding URL.
 
-Reference: [Ollama embedding API](https://docs.ollama.com/api/embed).
+## Real verification on 2026-10-31
+
+The project launcher plus adapter returned two synthetic passage vectors and one
+query vector, all **2560-dimensional**, using model digest:
+
+`359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7`
+
+The regular service reported the same digest and completed a real generation
+request with HTTP 200 afterward. A direct embedding probe also returned finite
+vectors with norms approximately 1. These checks establish actual vector output
+and generation compatibility; they do not establish retrieval accuracy.
+
+## Limits and handoff to D
+
+Last-token pooling takes a vector from the generation model's internal states.
+This is an **experimental raw representation**, and the upstream embedding-mode
+documentation targets dedicated embedding models. D must evaluate retrieval
+quality before treating these vectors as a validated semantic-search solution.
+Prior Nomic vectors cannot be reused: their model, dimensions, and profile differ.
+Future index metadata must preserve the Qwen digest, pooling profile, and dimensions.
+
+`.env.example` defines `EMBEDDING_OLLAMA_BASE_URL=http://127.0.0.1:11435`.
+D must wire that client separately from `OLLAMA_BASE_URL`, retain startup/readiness
+checks, and pass the same request lock to generation and embedding adapters.
+D also owns the remaining legacy model defaults in `core/settings.py`; C has not
+edited those files. No existing `.env` was overwritten.
+
+The default API still uses labelled mock tools. Qdrant persistence, live retrieval,
+grounded generation integration, and evaluation remain pending.

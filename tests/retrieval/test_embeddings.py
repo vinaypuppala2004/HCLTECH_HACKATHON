@@ -13,7 +13,7 @@ from evidencedesk.retrieval.embeddings import (
 )
 
 DIGEST = "a" * 64
-# Synthetic capability metadata exercises the success path; live Qwen lacks it.
+# Synthetic HTTP fixtures use small vectors; live Qwen returns 2560 dimensions.
 DIMENSIONS = 8
 
 
@@ -67,6 +67,8 @@ def test_capable_server_preserves_input_order_and_qwen_model_identity(request_da
             "model": "qwen3:4b",
             "input": request_data.texts,
             "truncate": False,
+            "keep_alive": "1m",
+            "options": {"num_ctx": 1024, "num_batch": 64, "num_gpu": 0},
         }
         return httpx.Response(
             200, json={"model": EMBEDDING_MODEL, "embeddings": [vector(0.1), vector(0.2)]}
@@ -123,7 +125,8 @@ def test_missing_model_is_explicit_and_does_not_embed_or_pull(request_data):
     assert calls == ["/api/tags"]
 
 
-def test_unsupported_qwen_does_not_embed_or_substitute_another_model(request_data):
+@pytest.mark.parametrize("embedding_status", [200, 501])
+def test_qwen_endpoint_is_probed_without_advertised_capability(request_data, embedding_status):
     calls = []
 
     def handler(request):
@@ -137,20 +140,33 @@ def test_unsupported_qwen_does_not_embed_or_substitute_another_model(request_dat
                     + [{"name": "another-embedding-model", "digest": "b" * 64}]
                 },
             )
-        assert request.url.path == "/api/show"
-        assert json.loads(request.content) == {"model": "qwen3:4b"}
-        return httpx.Response(200, json={"capabilities": ["completion"], "model_info": {}})
+        body = json.loads(request.content)
+        assert body["model"] == "qwen3:4b"
+        if request.url.path == "/api/show":
+            details = model_details()
+            details["capabilities"] = ["completion", "tools", "thinking"]
+            return httpx.Response(200, json=details)
+        assert request.url.path == "/api/embed"
+        if embedding_status == 501:
+            return httpx.Response(501, json={"error": "Start with --embeddings"})
+        return httpx.Response(200, json={"model": "qwen3:4b", "embeddings": [vector(), vector()]})
 
     with httpx.Client(
         base_url="http://ollama.test:11434", transport=httpx.MockTransport(handler)
     ) as client:
         response = OllamaEmbeddings(client)(request_data)
 
-    assert not response.ok and response.data is None
-    assert response.error.code == "EMBEDDING_UNAVAILABLE"
-    assert "Only qwen3:4b is allowed" in response.error.message
-    assert not response.error.retryable
-    assert calls == ["/api/tags", "/api/show"]
+    if embedding_status == 200:
+        assert response.ok and response.error is None
+        assert response.data.model == "qwen3:4b"
+        assert calls == ["/api/tags", "/api/show", "/api/embed", "/api/tags"]
+    else:
+        assert not response.ok and response.data is None
+        assert response.error.code == "EMBEDDING_UNAVAILABLE"
+        assert "embedding_server" in response.error.message
+        assert "11435" in response.error.message
+        assert not response.error.retryable
+        assert calls == ["/api/tags", "/api/show", "/api/embed"]
 
 
 @pytest.mark.parametrize("dimensions", [None, 0, -1, True, "2560"])

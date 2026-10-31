@@ -161,9 +161,13 @@ claim, or returns `not_found` for no hits. No Ollama, conflicts, or clarificatio
 }
 ```
 
-`VerifyInput` → `Envelope[Verification]`. Stub checks only claim quotation IDs and
-nonempty exact substrings. Success is labelled `limited`. It does not evaluate
-semantic support or conflicts. Empty claims produce `passed=false` and no checks.
+`VerifyInput` → `Envelope[Verification]`. Deterministic checks require every claim
+citation to identify a retrieved passage with a nonblank exact quote and
+`applicable=true`. An exact quote from an inapplicable hit retains
+`quote_valid=true`, but its claim verdict is `unsupported` and verification fails.
+All claim checks must be supported for verification to pass. Success is labelled
+`limited`; semantic support and conflicts are not evaluated. Empty claims produce
+`passed=false` and no checks.
 
 ## Tool 5: read_sources — B
 
@@ -178,9 +182,12 @@ semantic support or conflicts. Empty claims produce `passed=false` and no checks
 `doc_mock_guide` returns the fixture and passage. Unknown IDs return `NOT_FOUND`.
 Synthetic fixtures never claim real public URLs.
 
-## Internal model ports — planned
+## Internal model ports
 
-Both use envelopes and have typed callable ports, but no implementations yet.
+Both use envelopes and have typed callable ports. The embedding port has an
+opt-in Ollama adapter in `retrieval/embeddings.py`; see `docs/embeddings.md` for
+validation, errors, locking, and the handoff to D. Generation remains unimplemented.
+The default API still uses mock tools; this adapter does not enable live search.
 
 ```json
 {
@@ -199,8 +206,17 @@ Both use envelopes and have typed callable ports, but no implementations yet.
 }
 ```
 
-C owns embeddings and generation. Target embeddings have 768 dimensions and
-one vector per input in order, using `search_query:` / `search_document:` prefixes.
+C owns the model ports. Generation uses `qwen3:4b`; embeddings use
+`nomic-embed-text:v1.5` on the normal Ollama service at port 11434. The native
+adapter adds `search_query:` or `search_document:` prefixes and validates the
+model, digest, vector count, finite values, and declared dimensions. It produces
+768-dimensional vectors. `CompactEmbeddings` applies the Nomic MRL transform
+(layer normalization, leading dimensions, L2 normalization) to produce 512
+dimensions by default. Stored profile metadata prevents mixing incompatible
+dimensions or transforms. Model digest changes require a new/rebuilt index.
+Truncation is disabled, and no alternative embedding model is selected on failure.
+The JSON shapes are unchanged; `EmbeddingOutput.dimensions` reports the actual
+output size. See `docs/embeddings.md` for indexing and the handoff to D.
 Generation content must match the supplied JSON Schema. Future model adapters
 share a request limiter. Never silently substitute a different model or mock.
 
@@ -287,3 +303,19 @@ Concrete mock health response (request ID varies):
 
 Use `/docs` to execute requests and inspect full nested responses. UI history is
 display-only; v1 sends the latest question and explicit scope, not chat history.
+The health example assumes `.env` uses the updated `.env.example` model values.
+The existing default model names in `core/settings.py` already match this split.
+
+## Internal C1 indexing interface
+
+`QdrantIndex(path, CompactEmbeddings(native_embedder, dimensions=512))` owns one
+local client. D constructs it once in the backend and closes it at shutdown;
+UI processes must not open the same path. B supplies validated `Document` and
+`Passage` records to `index_document(document, passages)`, which returns
+`Envelope[IngestResult]` for one document using the existing JSON shapes.
+
+`search(QueryInput)` returns `Envelope[SearchResult]` with at most six scoped
+semantic hits. Product/environment matching is case-insensitive; version matching
+is exact. BM25 scores are null and RRF scores are zero until C2 fusion is added.
+`read_sources(SourcesInput)` returns the existing source envelope. These methods
+are opt-in; the default mock API factory has not been changed.

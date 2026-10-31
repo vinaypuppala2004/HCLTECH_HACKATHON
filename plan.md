@@ -8,8 +8,11 @@ conflicting versions, and asks for missing context or declines when support is
 insufficient. The centerpiece is side-by-side evidence and explicit version selection.
 
 Architecture: Streamlit → FastAPI → retrieval → draft → verification → cited reply.
-Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → local embeddings
-→ Qdrant. Combine BM25 and semantic retrieval through reciprocal rank fusion.
+Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → BM25 and
+semantic retrieval. Use `qwen3:4b` for generation and `nomic-embed-text:v1.5` for
+embeddings. The C1 adapter stores 512-dimensional Nomic MRL vectors in local
+Qdrant, with committed revisions and restart support. BM25 fusion, version
+counterparts, API wiring, and held-out evaluation remain pending.
 
 ### Tech stack
 | Component | Choice | Skeleton status |
@@ -17,9 +20,9 @@ Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → local em
 | Interface | Streamlit | HTTP-backed mock chat |
 | Backend | Python / FastAPI / Pydantic | Typed routes and tool wiring |
 | Generation | Ollama `qwen3:4b` | Planned; no inference |
-| Embeddings | Ollama `nomic-embed-text:v1.5` | Planned; no model calls |
-| Vector storage | Qdrant local persistent directory | Planned; no database |
-| Retrieval | BM25 + semantic search | One fixed fixture |
+| Embeddings | `nomic-embed-text:v1.5`, 512-dimensional MRL profile | Live adapter implemented; API still mock |
+| Vector storage | Qdrant local persistent directory | C1 persistence and restart implemented |
+| Retrieval | Semantic search with scope filters; BM25 fusion pending | Opt-in C1 index; default API uses fixture |
 | Evaluation | Ragas with local Ollama and labelled checks | Planned; no scores |
 
 ### Team and ownership
@@ -58,7 +61,8 @@ silently substitute mocks. Cut polish before citations, conflicts, or evaluation
 | Local FastAPI + Streamlit | Agreed stack; no public deployment |
 | Python 3.13 and a pinned dependency lock | Match the verified setup across teammates |
 | `qwen3:4b` generation | User-selected; benchmark on the 4 GB GPU |
-| Separate local embedding model | Generation and embeddings have different roles |
+| Qwen generation and Nomic embeddings | Latest user-selected model split |
+| 512-dimensional Nomic MRL vectors | Smaller storage; eight synthetic development cases matched the full profile |
 | Qdrant local directory | User-selected persistence; backend owns the client |
 | Ragas outside interactive requests | User-selected evaluation without chat latency |
 | Mock-only first skeleton | Parallel work without external services/downloads |
@@ -81,11 +85,11 @@ All questions currently return that same fixture; the full script is future work
 
 ## Person A — Frontend — edit only this section
 - [x] Streamlit chat sends HTTP requests and displays replies/evidence.
-- [ ] A1: Add upload controls and source browsing using the frozen API.
-- [ ] A2: Add product/version/environment controls and side-by-side conflicts.
-- [ ] A3: Show claim citations, fallback states, and clear service errors.
-- [ ] A4: Preserve session history without repeating requests on rerun.
-- [ ] A5: Finish frontend checks, README, and panel-facing demo presentation.
+- [x] A1: Add upload controls and source browsing using the frozen API.
+- [x] A2: Add product/version/environment controls and side-by-side conflicts.
+- [x] A3: Show claim citations, fallback states, and clear service errors.
+- [x] A4: Preserve session history without repeating requests on rerun.
+- [x] A5: Finish frontend checks, README, and panel-facing demo presentation.
 
 Acceptance: UI states work against mocks and live responses without hidden fallback.
 Progress: `progress/member-a.md`.
@@ -93,10 +97,24 @@ Progress: `progress/member-a.md`.
 ## Person B — Chunking — edit only this section
 - [x] Ingestion/source-reader stubs and owned folders exist.
 - [ ] B1: Curate public sources and provenance; label synthetic fixtures.
-- [ ] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
-- [ ] B3: Segment passages with headings, overlap, and stable source IDs.
+- [x] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
+- [x] B3: Segment passages with headings, overlap, and stable source IDs.
 - [ ] B4: Report empty/corrupt inputs; send passages to C's indexing port.
+  - [x] Add opt-in upload validation, strict base64/limits, and per-file errors.
+  - [ ] Connect C's agreed indexing port and verify actual committed results.
 - [ ] B5: Verify formats and deduplication; share source IDs with D for labels.
+
+Person B phases map directly to B1–B5 above. Phase 2 parsing is complete and
+preserves PDF pages, HTML/Markdown headings, and source line ranges. Phase 3 adds
+exact source slices with configurable character limits and overlap (defaults:
+1,200/200), deterministic document/passage IDs, and internal location records.
+Chunks never cross source blocks or pages. Output uses the existing contracts;
+default ingestion and source tools remain mocked. Phase 4's opt-in validator
+prepares files in memory and reports per-file errors using the existing envelope;
+valid files remain rejected/NOT_IMPLEMENTED until indexing is connected. At the
+user's direction, C's undefined indexing handoff stays pending and B4 is not
+complete. Phase 1 source curation and phase 5 deduplication/label handoff are also
+pending. Study checklists for phases 2–3 live in the owned ingestion folder.
 
 Acceptance: citation locations survive chunking; failed files never appear indexed.
 Progress: `progress/member-b.md`.
@@ -104,10 +122,17 @@ Progress: `progress/member-b.md`.
 ## Person C — Retrieval and answers — edit only this section
 - [x] Shared contracts, ports, and mock fixtures exist.
 - [x] Retrieval, drafting, and verification stubs exist.
-- [ ] C1: Add local embeddings and backend-owned Qdrant persistence.
+- [x] C1: Add local embeddings and backend-owned Qdrant persistence.
+  - [x] Use Nomic for embeddings; retain Qwen for generation only.
+  - [x] Implement the trained 512-dimensional MRL profile and index compatibility metadata.
+  - [x] Persist documents, passage locations, and revisions; reject incomplete writes.
+  - [x] Verify restart and compare 512/768 dimensions on eight synthetic development cases.
+  - Latest cleanup/documentation edits are unverified; user requested no further checks.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
+  - [ ] Add BM25 lexical ranking and fuse it with the C1 semantic results.
 - [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
 - [ ] C4: Add verification/fallback and index B's passages; expose tools to D.
+  - [x] Reject inapplicable or invalid claim citations; verify API fallback with mocks.
 - [ ] C5: Verify restart, share ranking results, and coordinate integration with D.
 
 Acceptance: retrieval respects scope and persists; answers cite evidence and fail clearly.

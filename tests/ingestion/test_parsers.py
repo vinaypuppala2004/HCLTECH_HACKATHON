@@ -271,8 +271,8 @@ def test_pdf_does_not_return_partial_pages_on_extraction_failure(monkeypatch):
 
     original = PageObject.extract_text
 
-    def fail_second_page(page):
-        text = original(page)
+    def fail_second_page(page, **kwargs):
+        text = original(page, **kwargs)
         if text == "Bad page":
             raise ValueError("Synthetic damaged font")
         return text

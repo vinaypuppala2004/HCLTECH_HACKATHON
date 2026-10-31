@@ -142,8 +142,9 @@ class QdrantIndex:
                 return failure(
                     "BAD_INPUT", "Invalid passages, duplicate IDs, or 500-passage limit exceeded."
                 )
+            identity = document.model_dump(mode="json", exclude={"filename"})
             encoded = json.dumps(
-                [document.model_dump(mode="json"), [p.model_dump(mode="json") for p in passages]],
+                [identity, [p.model_dump(mode="json") for p in passages]],
                 sort_keys=True,
                 ensure_ascii=False,
             )
@@ -274,20 +275,27 @@ class QdrantIndex:
                     if matches_scope(evidence.document, request.context)
                 }
                 if not eligible:
-                    return success(SearchResult(
-                        index_revision=self.index_revision,
-                        hits=[],
-                        warnings=["No committed passages match the selected scope."],
-                    ))
+                    return success(
+                        SearchResult(
+                            index_revision=self.index_revision,
+                            hits=[],
+                            warnings=["No committed passages match the selected scope."],
+                        )
+                    )
                 return self._compose_result(
                     request,
                     self._lexical.scores(request.question, eligible),
                     {},
-                    warnings=["BM25-only retrieval was explicitly selected; semantic ranking was not used."],
+                    warnings=[
+                        "BM25-only retrieval was explicitly selected; "
+                        "semantic ranking was not used."
+                    ],
                 )
             except Exception:
                 _LOG.exception("Lexical retrieval failed.")
-                return failure("INTERNAL_ERROR", "BM25 search failed; inspect and reopen the index.")
+                return failure(
+                    "INTERNAL_ERROR", "BM25 search failed; inspect and reopen the index."
+                )
 
     def _compose_result(
         self,
@@ -314,9 +322,9 @@ class QdrantIndex:
         messages.extend(comparison_warnings)
         if not any(score > 0 for score in lexical_scores.values()):
             messages.append("No lexical matches were found in the selected scope.")
-        return success(SearchResult(
-            index_revision=self.index_revision, hits=hits, warnings=messages
-        ))
+        return success(
+            SearchResult(index_revision=self.index_revision, hits=hits, warnings=messages)
+        )
 
     def _ensure_corpus(self) -> None:
         if self._corpus_revision == self.index_revision and self._lexical is not None:
@@ -340,9 +348,9 @@ class QdrantIndex:
         expected = sum(entry.document.passage_count for entry in self._state.documents.values())
         if len(corpus) != expected:
             raise ValueError("Committed corpus passage counts do not match.")
-        lexical = BM25Corpus({
-            passage_id: evidence.lexical_text for passage_id, evidence in corpus.items()
-        })
+        lexical = BM25Corpus(
+            {passage_id: evidence.lexical_text for passage_id, evidence in corpus.items()}
+        )
         self._evidence = corpus
         self._lexical = lexical
         self._corpus_revision = self.index_revision

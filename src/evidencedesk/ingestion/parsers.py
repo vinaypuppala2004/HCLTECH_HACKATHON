@@ -171,7 +171,7 @@ def _parse_pdf(content: bytes) -> tuple[tuple[SourceBlock, ...], tuple[str, ...]
         blocks: list[SourceBlock] = []
         warnings: list[str] = []
         for page_number, page in enumerate(reader.pages, start=1):
-            text = page.extract_text()
+            text = page.extract_text(extraction_mode="layout")
             if text.strip():
                 blocks.append(SourceBlock(text, page=page_number))
             else:

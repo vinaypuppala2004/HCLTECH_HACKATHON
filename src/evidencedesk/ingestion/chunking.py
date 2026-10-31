@@ -8,7 +8,7 @@ exact slice of one parser block, retaining its heading path and PDF page.
 import hashlib
 import json
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from evidencedesk.contracts.models import Document, Metadata, Passage
 from evidencedesk.ingestion.parsers import (
@@ -25,12 +25,19 @@ MAX_DOCUMENT_PASSAGES = 500
 class ChunkingConfig:
     max_chars: int = 1200
     overlap_chars: int = 200
+    group_html_sections: bool = False
 
     def __post_init__(self):
         if type(self.max_chars) is not int or self.max_chars < 1:
             raise ValueError("max_chars must be a positive integer.")
         if type(self.overlap_chars) is not int or not 0 <= self.overlap_chars < self.max_chars:
             raise ValueError("overlap_chars must be an integer from 0 to max_chars - 1.")
+        if type(self.group_html_sections) is not bool:
+            raise ValueError("group_html_sections must be boolean.")
+
+
+LIVE_CHUNKING = ChunkingConfig(max_chars=4096, overlap_chars=200, group_html_sections=True)
+COMPACT_CHUNKING = ChunkingConfig(max_chars=1800, overlap_chars=200, group_html_sections=True)
 
 
 @dataclass(frozen=True)
@@ -77,6 +84,17 @@ def prepare_document(
     This derives identifiers only: duplicate detection remains a later phase.
     """
     parsed = parse_document(filename, content)
+    if parsed.format == "html" and config is not None and config.group_html_sections:
+        blocks: list[SourceBlock] = []
+        for block in parsed.blocks:
+            if blocks and blocks[-1].section_path == block.section_path:
+                previous = blocks[-1]
+                blocks[-1] = replace(
+                    previous, text=previous.text + "\n" + block.text, end_line=block.end_line
+                )
+            else:
+                blocks.append(block)
+        parsed = replace(parsed, blocks=tuple(blocks))
     metadata_snapshot = metadata.model_copy(deep=True)
     digest = hashlib.sha256(content).hexdigest()
     document_id = _stable_id(

@@ -1,5 +1,6 @@
 """Run with: python -m uvicorn evidencedesk.api.app:app --host 127.0.0.1."""
 
+import logging
 from time import perf_counter
 
 from fastapi import FastAPI, Request
@@ -41,6 +42,14 @@ ERROR_STATUS = {
     "NOT_IMPLEMENTED": 501,
     "INTERNAL_ERROR": 500,
 }
+ERROR_RESPONSES = {
+    status: {
+        "model": Envelope[None],
+        "description": " / ".join(code for code, value in ERROR_STATUS.items() if value == status),
+    }
+    for status in sorted(set(ERROR_STATUS.values()))
+}
+logger = logging.getLogger(__name__)
 
 
 class ToolFailure(Exception):
@@ -49,18 +58,21 @@ class ToolFailure(Exception):
 
 
 def unwrap(response: Envelope):
-    if not response.ok or response.data is None:
-        raise ToolFailure(
-            response.error
-            or ToolError(code="INTERNAL_ERROR", message="Empty tool response.", retryable=False)
-        )
-    return response.data
+    if response.ok and response.data is not None and response.error is None:
+        return response.data
+    if not response.ok and response.data is None and response.error is not None:
+        raise ToolFailure(response.error)
+    raise ToolFailure(
+        ToolError(code="INTERNAL_ERROR", message="Invalid tool response envelope.", retryable=False)
+    )
 
 
 def create_app(settings: Settings | None = None, tools: Tools | None = None) -> FastAPI:
     settings = settings or get_settings()
+    if settings.app_mode != "mock":
+        raise RuntimeError("Only APP_MODE=mock is implemented; live adapters are not ready.")
     tools = tools or build_tools(settings)
-    application = FastAPI(title="EvidenceDesk mock API", version="0.1.0")
+    application = FastAPI(title="EvidenceDesk mock API", version="0.1.0", responses=ERROR_RESPONSES)
 
     @application.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError):
@@ -80,14 +92,21 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException):
-        code = "NOT_FOUND" if exc.status_code == 404 else "BAD_INPUT"
+        if exc.status_code >= 500:
+            code, message = "INTERNAL_ERROR", "Unexpected backend error."
+            logger.error("HTTP error %s on %s", exc.status_code, request.url.path)
+        else:
+            code = "NOT_FOUND" if exc.status_code == 404 else "BAD_INPUT"
+            message = str(exc.detail)
         return JSONResponse(
-            status_code=exc.status_code,
-            content=failure(code, str(exc.detail)).model_dump(),
+            status_code=ERROR_STATUS[code],
+            content=failure(code, message).model_dump(),
+            headers=exc.headers,
         )
 
     @application.exception_handler(Exception)
     async def unexpected_error(request: Request, exc: Exception):
+        logger.exception("Unexpected backend error on %s", request.url.path)
         return JSONResponse(
             status_code=500,
             content=failure("INTERNAL_ERROR", "Unexpected backend error.").model_dump(),
@@ -95,6 +114,7 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.get("/v1/health", response_model=Envelope[Health])
     def health():
+        """Report mock readiness and fixture counts; no live services are probed."""
         return success(
             Health(
                 mode="mock",

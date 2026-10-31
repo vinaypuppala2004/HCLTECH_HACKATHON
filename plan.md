@@ -117,7 +117,7 @@ Progress: `progress/member-c.md`.
 ## Person D — FastAPI and evaluation — edit only this section
 - [x] FastAPI routes, configuration, dependency factory, and mock orchestration exist.
 - [x] One smoke test covers API/tool wiring, chat submission, and rerun behavior.
-- [ ] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
+- [x] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
 - [ ] D2: Wire B/C tools through shared ports; manage startup and request concurrency.
 - [ ] D3: Label 24 questions; freeze 8 held-out cases before tuning.
 - [ ] D4: Integrate Ragas with explicitly local model and embedding providers.

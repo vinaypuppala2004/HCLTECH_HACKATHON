@@ -2,7 +2,8 @@
 
 - Role: frontend.
 - Completed: HTTP-backed Streamlit chat and supporting-evidence display; A1 upload
-  controls and source browsing; A2 context controls and conflict comparisons.
+  controls and source browsing; A2 context controls and conflict comparisons;
+  A3 claim citations, fallback states, and query service errors.
 - A1 uploads: PDF/HTML/Markdown/TXT, in-memory base64 payloads with all required
   metadata keys, explicit submission, and 20-file / 10 MB per-file / 50 MB batch
   checks. Each ready/duplicate/rejected result is shown separately. Mock
@@ -12,9 +13,9 @@
   Synthetic sources, empty results, and request errors are explicit. A rerun
   does not resubmit uploads or source requests; switching sources hides stale
   passages. README includes A1 usage.
-- Scope: A1 and A2 are complete; A3–A5 remain pending. A2 adds conflict rendering
-  and sidebar context selection without changing the existing claim, fallback,
-  or service-error presentation. No backend, contract, or dependency files changed.
+- Scope: A1–A3 are complete; A4–A5 remain pending. A3 changes answer presentation
+  and query failure handling; existing history storage/submission behavior and
+  A1/A2 controls are unchanged. No backend, contract, or dependency files changed.
 - Blockers: none recorded.
 - A1 verification (2026-10-31, Python 3.13.13, pinned requirements):
   - `python -m pytest -v tests/ui tests/acceptance/test_smoke.py`: 19 passed,
@@ -52,3 +53,31 @@
 - A2 limitation: the current mock ignores context and produces no conflicts.
   Conflict behavior was verified with explicitly synthetic, contract-valid
   responses in mock/live modes, without claiming live retrieval or resolution.
+- A3 citations: each claim has a dedicated citation expander with reported
+  excerpts, source/passage IDs, title, filename, origin, headings, and available
+  PDF page/source URL. Missing passages, mismatched excerpts, and inapplicable
+  sources are labelled without substituting evidence. Verification details
+  show backend checks and reasons, not quality scores or semantic guarantees.
+- A3 fallback states: needs_context shows the clarification field, question,
+  and options; not_found and insufficient_evidence have distinct messages and
+  readable reasons. Factual claims in fallback responses are withheld.
+- A3 service errors: query envelopes retain backend error code, message,
+  retryability, and request ID even on non-2xx responses. Transport failures,
+  timeouts, malformed replies, and inconsistent envelopes have explicit safe
+  messages. Raw response bodies/validation inputs are not shown. No automatic
+  retries or mock substitution were added. Mode labels and the query spinner
+  no longer unconditionally describe live-configured requests as mock.
+- A3 verification (2026-10-31, Python 3.13.13, unchanged pinned requirements):
+  - `python -m pytest -q -o faulthandler_timeout=30`: 81 passed (48 A3 cases
+    and all 33 prior tests), with the existing Starlette/httpx deprecation
+    warning. Integration tests ran outside the sandbox for the limitation
+    already recorded above.
+  - `python -m ruff check .`, `python -m ruff format --check .`, and
+    `git diff --check`: passed.
+  - Temporary FastAPI/Streamlit servers started; both health endpoints passed.
+    The UI displayed a cited mock answer over real local HTTP. After stopping
+    that backend, a new UI request displayed BACKEND_UNREACHABLE without an
+    answer substitution. All temporary processes stopped after the check.
+- A3 limitation: live services remain unimplemented. Additional fallback,
+  citation-edge, and service-error cases use synthetic response fixtures;
+  local substring inspection does not establish semantic support.

@@ -57,6 +57,15 @@ answer. Changing context does not resolve an existing conflict. The current mock
 backend ignores context and returns no conflicts; comparison tests use explicitly
 synthetic responses matching the frozen contract.
 
+For A3, expand **Citations for claim ...** below each claim to inspect its exact
+excerpts, passage/source IDs, and available source locations. Missing or
+mismatched citations and inapplicable passages are labelled. **Verification
+details** shows backend checks, not evaluation scores. Missing context, no
+results, and insufficient evidence have distinct messages; fallback responses
+withhold factual claims. Query errors show the backend code, message, request ID,
+retryability, and recovery guidance when available. Connection/timeouts and
+invalid replies are explicit; failed requests never substitute a mock answer.
+
 - [Swagger API documentation](http://127.0.0.1:8000/docs)
 - [Health](http://127.0.0.1:8000/v1/health)
 - [OpenAPI JSON](http://127.0.0.1:8000/openapi.json)

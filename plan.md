@@ -84,7 +84,7 @@ All questions currently return that same fixture; the full script is future work
 - [x] A1: Add upload controls and source browsing using the frozen API.
 - [x] A2: Add product/version/environment controls and side-by-side conflicts.
 - [x] A3: Show claim citations, fallback states, and clear service errors.
-- [ ] A4: Preserve session history without repeating requests on rerun.
+- [x] A4: Preserve session history without repeating requests on rerun.
 - [ ] A5: Finish frontend checks, README, and panel-facing demo presentation.
 
 Acceptance: UI states work against mocks and live responses without hidden fallback.

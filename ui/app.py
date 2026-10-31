@@ -2,6 +2,7 @@
 
 import streamlit as st
 from answers import show_answer
+from chat_history import pending_replies, queue_question
 from conflicts import show_conflicts
 from documents import show_documents
 from query_client import QueryServiceError, request_query
@@ -54,38 +55,43 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+st.chat_input(
+    "Ask about the documents", max_chars=2000, key="chat_question", on_submit=queue_question
+)
+
+for message in pending_replies():
+    try:
+        payload = QueryInput.model_validate(message["query"])
+        with st.spinner("Requesting a reply..."):
+            result = request_query(settings.backend_url, payload)
+            message.update(status="complete", result=result.model_dump())
+    except (QueryServiceError, ValueError) as exc:
+        text = (
+            str(exc)
+            if isinstance(exc, QueryServiceError)
+            else "BAD_INPUT: Enter a question containing 1–2,000 non-whitespace characters."
+        )
+        message.update(status="error", text=text)
+
 for message_index, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if "result" in message:
             show_reply(
                 QueryResult.model_validate(message["result"]), key_prefix=f"reply_{message_index}"
             )
+        elif message.get("status") == "in_flight":
+            st.warning(
+                "REQUEST_INTERRUPTED: This request has no saved result and will not be sent again "
+                "automatically. Submit the question again if you want a new request."
+            )
+        elif message["role"] == "assistant":
+            st.error(message["text"])
         else:
             st.write(message["text"])
-
-if question := st.chat_input("Ask about the documents", max_chars=2000):
-    st.session_state.messages.append({"role": "user", "text": question})
-    with st.chat_message("user"):
-        st.write(question)
-    with st.chat_message("assistant"):
-        try:
-            payload = QueryInput(
-                question=question,
-                context=Scope(
-                    product=product.strip() or None,
-                    version=version.strip() or None,
-                    environment=environment.strip() or None,
-                ),
-            )
-            with st.spinner("Requesting a reply..."):
-                result = request_query(settings.backend_url, payload)
-            show_reply(result, key_prefix=f"reply_{len(st.session_state.messages)}")
-            st.session_state.messages.append({"role": "assistant", "result": result.model_dump()})
-        except (QueryServiceError, ValueError) as exc:
-            text = (
-                str(exc)
-                if isinstance(exc, QueryServiceError)
-                else "BAD_INPUT: Enter a question containing 1–2,000 non-whitespace characters."
-            )
-            st.error(text)
-            st.session_state.messages.append({"role": "assistant", "text": text})
+            if "context" in message:
+                context = Scope.model_validate(message["context"])
+                st.caption(
+                    f"Submitted context — Product: {context.product or 'Any'} | "
+                    f"Version: {context.version or 'Any'} | "
+                    f"Environment: {context.environment or 'Any'}"
+                )

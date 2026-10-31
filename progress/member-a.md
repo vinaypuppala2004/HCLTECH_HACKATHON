@@ -3,7 +3,8 @@
 - Role: frontend.
 - Completed: HTTP-backed Streamlit chat and supporting-evidence display; A1 upload
   controls and source browsing; A2 context controls and conflict comparisons;
-  A3 claim citations, fallback states, and query service errors.
+  A3 claim citations, fallback states, and query service errors; A4 session history
+  and submission handling across reruns.
 - A1 uploads: PDF/HTML/Markdown/TXT, in-memory base64 payloads with all required
   metadata keys, explicit submission, and 20-file / 10 MB per-file / 50 MB batch
   checks. Each ready/duplicate/rejected result is shown separately. Mock
@@ -13,9 +14,9 @@
   Synthetic sources, empty results, and request errors are explicit. A rerun
   does not resubmit uploads or source requests; switching sources hides stale
   passages. README includes A1 usage.
-- Scope: A1–A3 are complete; A4–A5 remain pending. A3 changes answer presentation
-  and query failure handling; existing history storage/submission behavior and
-  A1/A2 controls are unchanged. No backend, contract, or dependency files changed.
+- Scope: A1–A4 are complete; A5 remains pending. A4 changes only session history
+  and submission handling; A1–A3 controls/presentation modules are unchanged.
+  No backend, contract, dependency, or README files changed in A4.
 - Blockers: none recorded.
 - A1 verification (2026-10-31, Python 3.13.13, pinned requirements):
   - `python -m pytest -v tests/ui tests/acceptance/test_smoke.py`: 19 passed,
@@ -81,3 +82,32 @@
 - A3 limitation: live services remain unimplemented. Additional fallback,
   citation-edge, and service-error cases use synthetic response fixtures;
   local substring inspection does not establish semantic support.
+- A4 submissions: a chat-input callback queues each explicit submission with a
+  snapshot of its product/version/environment. A queued request is marked
+  consumed before validation/HTTP, and its result/error is saved before history
+  rendering. Reruns never dispatch completed, failed, or interrupted requests.
+  Deliberately submitting the same question again creates a new turn/request.
+- A4 history: preserves turn order, original context, cited responses, fallback
+  states, and error styling. Context edits, source browsing, and upload controls
+  do not resubmit chat. Earlier message shapes remain displayable without
+  migration or HTTP. Session state is isolated between browser sessions; v1
+  still sends only the latest question and explicit scope to the backend.
+- A4 interruptions: a request without a saved outcome remains visible with an
+  explicit interruption message and requires a new user submission. Rendering
+  failures do not discard saved outcomes or trigger another request.
+- A4 verification (2026-10-31, Python 3.13.13, unchanged pinned requirements):
+  - `python -m pytest -q -o faulthandler_timeout=30`: 97 passed (16 A4 cases
+    and all 81 prior tests), with the existing Starlette/httpx deprecation
+    warning. Integration tests ran outside the sandbox for the limitation
+    already recorded above.
+  - `python -m ruff check .`, `python -m ruff format --check .`, and
+    `git diff --check`: passed.
+  - Temporary FastAPI/Streamlit startup and health checks passed. Two UI turns
+    ran over real HTTP. After stopping the backend, reruns/context edits kept
+    both cited replies with zero additional requests. One explicit new
+    submission made one attempt; its saved connection error survived another
+    rerun. All temporary processes stopped after the check.
+- A4 limitation: history is retained within the current Streamlit session.
+  Browser reload/new sessions and server restarts are outside this persistence
+  scope. No durable storage or backend idempotency was added; live services
+  remain unimplemented. Interrupted/rerender-failure cases use synthetic tests.

@@ -38,6 +38,16 @@ Chat:
 Open [the chat](http://127.0.0.1:8501), submit **How do I reset my password?**, and
 expand the supporting evidence. The UI visibly identifies mock behavior.
 
+For A1, expand **Documents** to upload PDF, HTML, Markdown, or TXT files (up to
+20 files, 10 MB each, 50 MB per batch). Click **Upload documents** to submit;
+each file shows its backend status. The current mock rejects every upload with
+`NOT_IMPLEMENTED`; rejected files are not indexed.
+
+Click **Browse / refresh sources**, select a document, and click **Open source**
+to see exact passages, source/passage IDs, headings, and PDF page numbers when
+available. Synthetic sources are labelled. Refresh the list after live uploads
+to see newly indexed documents. Upload and source requests run only on submission.
+
 - [Swagger API documentation](http://127.0.0.1:8000/docs)
 - [Health](http://127.0.0.1:8000/v1/health)
 - [OpenAPI JSON](http://127.0.0.1:8000/openapi.json)

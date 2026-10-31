@@ -2,6 +2,7 @@
 
 import httpx
 import streamlit as st
+from documents import show_documents
 
 from evidencedesk.contracts.models import Envelope, QueryInput, QueryResult, Scope
 from evidencedesk.core.settings import get_settings
@@ -28,6 +29,8 @@ st.warning(
     "MOCK MODE — every question returns the same sample passage. Live RAG is not implemented."
 )
 st.caption('Try: "How do I reset my password?"')
+
+show_documents(settings.backend_url)
 
 with st.sidebar:
     st.subheader("Question context")

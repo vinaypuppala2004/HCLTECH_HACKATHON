@@ -81,7 +81,7 @@ All questions currently return that same fixture; the full script is future work
 
 ## Person A — Frontend — edit only this section
 - [x] Streamlit chat sends HTTP requests and displays replies/evidence.
-- [ ] A1: Add upload controls and source browsing using the frozen API.
+- [x] A1: Add upload controls and source browsing using the frozen API.
 - [ ] A2: Add product/version/environment controls and side-by-side conflicts.
 - [ ] A3: Show claim citations, fallback states, and clear service errors.
 - [ ] A4: Preserve session history without repeating requests on rerun.

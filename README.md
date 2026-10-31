@@ -48,6 +48,15 @@ to see exact passages, source/passage IDs, headings, and PDF page numbers when
 available. Synthetic sources are labelled. Refresh the list after live uploads
 to see newly indexed documents. Upload and source requests run only on submission.
 
+For A2, set **Product**, **Version**, and **Environment** in the sidebar before
+asking a question. Blank fields are sent as null; version identifiers retain
+their exact spelling. Conflict responses show evidence side by side with source
+context, applicability, and the backend's resolution/selection. **Use this context**
+fills the sidebar from that source; submit your question again to request a new
+answer. Changing context does not resolve an existing conflict. The current mock
+backend ignores context and returns no conflicts; comparison tests use explicitly
+synthetic responses matching the frozen contract.
+
 - [Swagger API documentation](http://127.0.0.1:8000/docs)
 - [Health](http://127.0.0.1:8000/v1/health)
 - [OpenAPI JSON](http://127.0.0.1:8000/openapi.json)

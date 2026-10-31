@@ -27,7 +27,7 @@ class QueryServiceError(Exception):
 def request_query(backend_url: str, payload: QueryInput) -> QueryResult:
     try:
         response = httpx.post(
-            f"{backend_url}/v1/query", json=payload.model_dump(), timeout=30, trust_env=False
+            f"{backend_url}/v1/query", json=payload.model_dump(), timeout=600, trust_env=False
         )
     except httpx.TimeoutException:
         raise QueryServiceError(

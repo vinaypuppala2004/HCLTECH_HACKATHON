@@ -28,7 +28,8 @@ st.set_page_config(page_title="EvidenceDesk", page_icon="📚")
 st.title("EvidenceDesk")
 if settings.app_mode == "mock":
     st.warning(
-        "MOCK MODE — every question returns the same sample passage. Live RAG is not implemented."
+        "MOCK MODE — every question returns the same sample passage. "
+        "Choose live mode for your documents."
     )
 else:
     st.caption(f"Configured mode: {settings.app_mode}")
@@ -50,7 +51,7 @@ with st.sidebar:
         help="Leave blank to send no environment restriction.",
     )
     st.caption("These values apply to your next question. Blank fields are sent as null.")
-    st.caption("Context is sent to the API; the retrieval stub does not filter it yet.")
+    st.caption("Context filters live retrieval. Mock mode ignores these values.")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

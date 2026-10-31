@@ -19,11 +19,13 @@ class Evidence:
 
     @property
     def lexical_text(self) -> str:
-        return "\n".join([
-            self.document.metadata.title,
-            *self.passage.section_path,
-            self.passage.text,
-        ])
+        return "\n".join(
+            [
+                self.document.metadata.title,
+                *self.passage.section_path,
+                self.passage.text,
+            ]
+        )
 
 
 def matches_scope(document: Document, scope: Scope) -> bool:
@@ -128,9 +130,7 @@ def select_version_counterparts(
         raise ValueError("Counterpart budget must leave at least one ranked evidence slot.")
     anchors = list(ranked[: max_hits - max_counterparts])
     protected = {hit.passage.passage_id for hit in anchors}
-    protected_versions = {
-        _version_section(corpus[hit.passage.passage_id]) for hit in anchors
-    }
+    protected_versions = {_version_section(corpus[hit.passage.passage_id]) for hit in anchors}
     original = {hit.passage.passage_id: hit for hit in ranked}
     query_terms = set(tokenize(query.question))
     candidates = []
@@ -146,9 +146,13 @@ def select_version_counterparts(
             signature = _version_section(candidate)
             if signature in protected_versions:
                 continue
-            candidates.append((
-                (anchor_rank, -(shared + query_overlap), candidate_id), signature, candidate,
-            ))
+            candidates.append(
+                (
+                    (anchor_rank, -(shared + query_overlap), candidate_id),
+                    signature,
+                    candidate,
+                )
+            )
     candidates.sort(key=lambda item: item[0])
     chosen: list[Evidence] = []
     chosen_ids: set[str] = set()
@@ -163,21 +167,21 @@ def select_version_counterparts(
             chosen_ids.add(candidate.passage_id)
             represented.add(signature)
     results = [
-        hit.model_copy(deep=True)
-        for hit in ranked
-        if hit.passage.passage_id not in chosen_ids
+        hit.model_copy(deep=True) for hit in ranked if hit.passage.passage_id not in chosen_ids
     ][: max_hits - len(chosen)]
     for candidate in chosen:
         previous = original.get(candidate.passage_id)
-        results.append(make_hit(
-            candidate,
-            rank=len(results) + 1,
-            bm25_score=previous.bm25_score if previous else None,
-            cosine_score=previous.cosine_score if previous else None,
-            rrf_score=previous.rrf_score if previous else 0.0,
-            counterpart=True,
-            scope=query.context,
-        ))
+        results.append(
+            make_hit(
+                candidate,
+                rank=len(results) + 1,
+                bm25_score=previous.bm25_score if previous else None,
+                cosine_score=previous.cosine_score if previous else None,
+                rrf_score=previous.rrf_score if previous else 0.0,
+                counterpart=True,
+                scope=query.context,
+            )
+        )
     for rank, hit in enumerate(results, start=1):
         hit.rank = rank
         hit.applicable = matches_scope(hit.document, query.context)
@@ -188,5 +192,7 @@ def select_version_counterparts(
             "the selected version. It must not support factual answer claims."
         )
     if len(available) > len(represented):
-        warnings.append("Additional matching version passages were omitted by the comparison budget.")
+        warnings.append(
+            "Additional matching version passages were omitted by the comparison budget."
+        )
     return results, warnings

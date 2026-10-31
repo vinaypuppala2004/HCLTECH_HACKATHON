@@ -63,7 +63,7 @@ def post_document_request[T](
     response = httpx.post(
         f"{backend_url}{route}",
         json=payload.model_dump(),
-        timeout=30,
+        timeout=600,
         trust_env=False,
     )
     envelope = Envelope[result_type].model_validate(response.json())

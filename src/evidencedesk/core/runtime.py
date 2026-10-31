@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from threading import Condition
 
+from evidencedesk.contracts.models import Health
 from evidencedesk.core.factory import Tools
 
 
@@ -30,9 +31,14 @@ class BackendRuntime:
             if self._tools is not None:
                 raise RuntimeError("Backend is already started.")
             tools = self._factory()
-            for name in ("ingest", "sources", "search", "draft", "verify"):
-                if not callable(getattr(tools, name, None)):
-                    raise RuntimeError(f"Backend tool '{name}' is not callable.")
+            try:
+                for name in ("ingest", "sources", "search", "draft", "verify"):
+                    if not callable(getattr(tools, name, None)):
+                        raise RuntimeError(f"Backend tool '{name}' is not callable.")
+            except Exception:
+                if tools.close is not None:
+                    tools.close()
+                raise
             self._tools = tools
             self._ready = True
 
@@ -41,7 +47,15 @@ class BackendRuntime:
         with self._condition:
             self._ready = False
             self._condition.wait_for(lambda: not self._active)
-            self._tools = None
+            tools, self._tools = self._tools, None
+            if tools is not None and tools.close is not None:
+                tools.close()
+
+    def health(self) -> Health | None:
+        with self._condition:
+            if not self._ready or self._tools is None or self._tools.health is None:
+                return None
+            return self._tools.health()
 
     @contextmanager
     def request(self) -> Iterator[Tools]:

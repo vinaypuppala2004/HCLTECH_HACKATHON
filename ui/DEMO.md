@@ -96,12 +96,18 @@ live adapter fails in a future integration, present the actual error and name
 any separate preview being shown. Never describe synthetic previews as saved
 live results.
 
+## Current live integration
+
+The main application now supports live ingestion, persistent Qdrant, hybrid
+retrieval, Qwen drafting, and semantic verification. Use `docs/live-runbook.md`
+for the real pipeline. This presentation remains an independent synthetic preview;
+its examples are not saved live responses or evaluation scores.
+
 ## Claims to keep precise
 
 - Frontend behavior is tested against mocks and typed live-shaped responses;
-  the real backend currently ignores question meaning and scope.
-- Upload parsing/indexing, Ollama generation/embeddings, Qdrant persistence,
-  and measured Ragas evaluation remain unimplemented in this baseline.
+  live mode applies product/version/environment scope to real indexed sources.
+- Measured Ragas evaluation remains pending. The preview performs no inference.
 - A quotation substring check is not semantic verification. `limited` is an
   evidence-strength label, not a numerical quality score.
 - Session history survives reruns within the current Streamlit session. A

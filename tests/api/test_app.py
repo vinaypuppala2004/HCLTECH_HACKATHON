@@ -96,10 +96,10 @@ def test_health_reports_mock_readiness_and_configured_models():
         assert health.data.index_revision == retrieved["index_revision"]
 
 
-@pytest.mark.parametrize("mode", ["live", "invalid"])
+@pytest.mark.parametrize("mode", ["invalid"])
 @pytest.mark.parametrize("injected", [False, True])
 def test_unsupported_mode_cannot_be_misreported_as_mock_ready(tools, mode, injected):
-    with pytest.raises(RuntimeError, match="Only APP_MODE=mock is implemented"):
+    with pytest.raises(RuntimeError, match="APP_MODE must be mock or live"):
         create_app(Settings(app_mode=mode), tools=tools if injected else None)
 
 

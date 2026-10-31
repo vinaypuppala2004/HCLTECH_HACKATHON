@@ -182,9 +182,12 @@ All claim checks must be supported for verification to pass. Success is labelled
 `doc_mock_guide` returns the fixture and passage. Unknown IDs return `NOT_FOUND`.
 Synthetic fixtures never claim real public URLs.
 
-## Internal model ports — planned
+## Internal model ports
 
-Both use envelopes and have typed callable ports, but no implementations yet.
+Both use envelopes and have typed callable ports. The embedding port has an
+opt-in Ollama adapter in `retrieval/embeddings.py`; see `docs/embeddings.md` for
+validation, errors, locking, and the handoff to D. Generation remains unimplemented.
+The default API still uses mock tools; this adapter does not enable live search.
 
 ```json
 {

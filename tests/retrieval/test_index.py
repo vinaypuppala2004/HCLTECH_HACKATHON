@@ -114,7 +114,12 @@ def test_scope_matching_and_six_hit_cap(tmp_path, embedder):
             assert index.index_document(doc, passages).ok
         result = index.search(query(product="demo", environment="PRODUCTION", version="v1")).data
         assert len(result.hits) == 6
-        assert all(hit.document.metadata.version == "v1" and hit.applicable for hit in result.hits)
+        assert all(
+            (hit.document.metadata.version == "v1" and hit.applicable)
+            if hit.selection == "ranked"
+            else not hit.applicable
+            for hit in result.hits
+        )
         assert [hit.rank for hit in result.hits] == [1, 2, 3, 4, 5, 6]
         before = embedder.calls
         assert index.search(query(product="Other")).data.hits == []

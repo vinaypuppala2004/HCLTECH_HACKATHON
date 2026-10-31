@@ -72,8 +72,8 @@ def unwrap(response: Envelope):
 
 def create_app(settings: Settings | None = None, tools: Tools | None = None) -> FastAPI:
     settings = settings or get_settings()
-    if settings.app_mode != "mock":
-        raise RuntimeError("Only APP_MODE=mock is implemented; live adapters are not ready.")
+    if settings.app_mode not in ("mock", "live"):
+        raise RuntimeError("APP_MODE must be mock or live.")
     backend = BackendRuntime(lambda: tools if tools is not None else build_tools(settings))
 
     @asynccontextmanager
@@ -85,7 +85,7 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
             await run_in_threadpool(backend.stop)
 
     application = FastAPI(
-        title="EvidenceDesk mock API",
+        title="EvidenceDesk API",
         version="0.1.0",
         responses=ERROR_RESPONSES,
         lifespan=lifespan,
@@ -139,16 +139,19 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.get("/v1/health", response_model=Envelope[Health])
     def health():
-        """Report mock readiness and fixture counts; no live services are probed."""
+        """Report actual live readiness/counts, or explicitly labelled mock state."""
+        live_health = backend.health()
+        if live_health is not None:
+            return success(live_health)
         return success(
             Health(
-                mode="mock",
-                ready=backend.ready,
+                mode=settings.app_mode,
+                ready=backend.ready and settings.app_mode == "mock",
                 ollama_available=False,
                 generation_model=settings.generation_model,
                 embedding_model=settings.embedding_model,
-                index_revision=1,
-                document_count=1,
+                index_revision=1 if settings.app_mode == "mock" else 0,
+                document_count=1 if settings.app_mode == "mock" else 0,
             )
         )
 
@@ -188,7 +191,7 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
                 active_tools.verify(VerifyInput(query=request, retrieval=retrieval, draft=draft))
             )
             trace.append(_step("verify", started))
-            if draft.claims and not verification.passed:
+            if (draft.claims or draft.conflicts) and not verification.passed:
                 draft = Draft(
                     status="insufficient_evidence",
                     claims=[],
@@ -198,7 +201,7 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
                 )
             return success(
                 QueryResult(
-                    mode="mock",
+                    mode=settings.app_mode,
                     result=draft,
                     retrieval=retrieval,
                     verification=verification,

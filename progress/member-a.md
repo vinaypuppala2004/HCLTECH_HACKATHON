@@ -149,3 +149,11 @@
   measured evaluation. Substring checks do not establish semantic support.
   Live adapters and D's measured evaluation report remain outside this frontend
   task; no evaluation scores or live-completion claims were added.
+
+## Live completion integration — 2026-10-31
+
+- User authorized completing all remaining application work except Ragas evaluation.
+- Live model/ingestion requests have explicit longer HTTP timeouts; UI wording now
+  distinguishes live mode from mocks. The separate preview remains synthetic.
+- Existing A1–A5 behavior and rerun/session regression checks remain in the suite.
+- Full integration suite: 472 tests passed; lint, format, dependency checks passed.

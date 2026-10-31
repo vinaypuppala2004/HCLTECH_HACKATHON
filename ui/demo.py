@@ -58,10 +58,12 @@ with st.expander("Presenter notes"):
     st.write(example.presenter_note)
 with st.expander("Current implementation and limits"):
     st.write(
-        "The main app calls FastAPI for a fixed cited mock reply, source browsing, and explicit "
-        "NOT_IMPLEMENTED upload rejections. Context is sent but ignored by the mock backend."
+        "The main app calls FastAPI for live document Q&A when APP_MODE=live. "
+        "Mock mode retains the fixed fixture and explicit NOT_IMPLEMENTED upload rejections."
     )
     st.write(
         "These presentation examples exercise frontend states only. Live ingestion, retrieval, "
-        "Ollama inference, Qdrant persistence, and measured Ragas evaluation remain unimplemented."
+        "Ollama inference, and Qdrant persistence are available in the main app. "
+        "This preview remains synthetic. "
+        "Measured Ragas evaluation and its report remain unimplemented."
     )

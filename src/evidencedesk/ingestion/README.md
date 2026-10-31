@@ -112,7 +112,19 @@ namespace; repeated identical blocks remain distinct. Reprocessing the same
 input/settings is deterministic across Python processes. No duplicate detection
 or storage is implied by deriving these IDs.
 
-## Phase 4: validation portion; indexing connection pending
+## Live integration update
+
+`LiveIngestion(index)` now connects preparation to `QdrantIndex.index_document`.
+It reports actual ready/duplicate/rejected receipts and preserves errors per file.
+The default mock tool and opt-in validation-only tool remain available separately.
+Live chunking uses 4,096 characters/200 overlap and groups adjacent HTML blocks
+within headings; PDF extraction uses layout mode and never crosses pages. A model
+input-length rejection retries the document at 1,800/200 without truncating text.
+Corpus limits remain 500 committed passages. `import_corpus` verifies the supplied
+archive and writes source/passage/location mapping to ignored runtime output.
+See `corpus/README.md` and `docs/live-runbook.md` for the completed live path.
+
+## Original phase 4 validation-only interface
 
 `prepare_uploads(IngestInput(...), config=...)` in `batching.py` decodes and
 prepares uploads using phases 2–3. It returns an internal `PreparedBatch` with

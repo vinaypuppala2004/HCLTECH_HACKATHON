@@ -1,0 +1,480 @@
+{
+  "dataset_id": "enterprise-v1",
+  "collection_id": "enterprise-support-public-v1",
+  "prepared_on": "2026-10-31",
+  "archive_filename": "enterprise-document-corpus.zip",
+  "archive_sha256": "33cb0aba7372b9ebec44d9fc58a56124d45f1fb6eadbe779584f71339b2ea30c",
+  "manifest_sha256": "bd2c5e720087ed7daaa9557af681dff6d1f216dbc4aed0c63d4cfa7993cd2ffd",
+  "source_count": 16,
+  "extraction": {
+    "pdf": "pdfplumber extract_text(x_tolerance=2, y_tolerance=3), physical page numbers; selected pages visually checked",
+    "html": "stdlib HTMLParser: main content, excluding script/style/nav; block boundaries and collapsed inline whitespace",
+    "markdown_txt": "UTF-8, CRLF converted to LF and remaining CR removed",
+    "line_locations": "1-based lines within the extracted PDF page or extracted non-PDF document; not raw HTML source lines",
+    "reference_contexts": "Exact evidence quotes with whitespace collapsed; raw quotes and locations retained separately",
+    "pdfplumber_version": "0.11.9"
+  },
+  "authoring": "Assistant-authored from user-supplied public source snapshots; no human review or model evaluation claimed",
+  "sources": [
+    {
+      "source_id": "ietf-rfc-9700",
+      "file": "documents/pdf/rfc9700.pdf",
+      "format": "pdf",
+      "metadata": {
+        "title": "RFC 9700: Best Current Practice for OAuth 2.0 Security",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc9700.pdf",
+        "product": "OAuth 2.0",
+        "version": "RFC 9700",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "security guidance and changes since RFC 6749"
+      ],
+      "note": null,
+      "publication_month": "2025-01",
+      "page_count": 46,
+      "downloaded_at_utc": "2026-10-31T08:27:31.791510+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc9700.pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 401867,
+      "sha256": "2a9d43a83bc39c2f033046ff685f94651ddac94e57ee261d7303790af6cbf648",
+      "extracted_characters": 118849,
+      "modified": false,
+      "physical_pdf_pages": 46
+    },
+    {
+      "source_id": "ietf-rfc-9449",
+      "file": "documents/pdf/rfc9449.pdf",
+      "format": "pdf",
+      "metadata": {
+        "title": "RFC 9449: OAuth 2.0 Demonstrating Proof of Possession (DPoP)",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc9449.pdf",
+        "product": "OAuth 2.0",
+        "version": "RFC 9449",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "token binding and replay protection"
+      ],
+      "note": null,
+      "publication_month": "2023-09",
+      "page_count": 39,
+      "downloaded_at_utc": "2026-10-31T08:27:31.423970+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc9449.pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 519561,
+      "sha256": "7e2cd3cee8eac23309db119e723769bd391801db0479bffafe05c1285a10defd",
+      "extracted_characters": 87582,
+      "modified": false,
+      "physical_pdf_pages": 39
+    },
+    {
+      "source_id": "ietf-rfc-9126",
+      "file": "documents/pdf/rfc9126.pdf",
+      "format": "pdf",
+      "metadata": {
+        "title": "RFC 9126: OAuth 2.0 Pushed Authorization Requests",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc9126.pdf",
+        "product": "OAuth 2.0",
+        "version": "RFC 9126",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "authorization request configuration and errors"
+      ],
+      "note": null,
+      "publication_month": "2021-09",
+      "page_count": 18,
+      "downloaded_at_utc": "2026-10-31T08:27:28.151916+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc9126.pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 238935,
+      "sha256": "3bb701aa98120a9097bef7f3f6d6265f7685b2324a779f674dfd314e5d388881",
+      "extracted_characters": 41915,
+      "modified": false,
+      "physical_pdf_pages": 18
+    },
+    {
+      "source_id": "ietf-rfc-9068",
+      "file": "documents/pdf/rfc9068.pdf",
+      "format": "pdf",
+      "metadata": {
+        "title": "RFC 9068: JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc9068.pdf",
+        "product": "OAuth 2.0",
+        "version": "RFC 9068",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "JWT token claims and validation"
+      ],
+      "note": null,
+      "publication_month": "2021-10",
+      "page_count": 15,
+      "downloaded_at_utc": "2026-10-31T08:27:29.964916+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc9068.pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 246655,
+      "sha256": "9c19b25210d0fb6a230d8e737dc6561f7f8b1bf20db4f615229176eca51d0fc2",
+      "extracted_characters": 33790,
+      "modified": false,
+      "physical_pdf_pages": 15
+    },
+    {
+      "source_id": "ietf-rfc-6749",
+      "file": "documents/txt/rfc6749.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "RFC 6749: The OAuth 2.0 Authorization Framework",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc6749.txt",
+        "product": "OAuth 2.0",
+        "version": "RFC 6749",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "authorization flows and historical baseline"
+      ],
+      "note": "Historical baseline updated by RFC 9700 and other RFCs; do not treat all 2012 flows as current recommendations.",
+      "publication_month": "2012-10",
+      "downloaded_at_utc": "2026-10-31T08:27:30.749977+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc6749.txt",
+      "content_type": "text/plain",
+      "size_bytes": 163498,
+      "sha256": "f204fc8661d6c92d2ec6e0b54808f961a9ad26e792f57f312d9528335519bd71",
+      "extracted_characters": 163498,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "ietf-rfc-7009",
+      "file": "documents/txt/rfc7009.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "RFC 7009: OAuth 2.0 Token Revocation",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc7009.txt",
+        "product": "OAuth 2.0",
+        "version": "RFC 7009",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "revoking access and refresh tokens"
+      ],
+      "note": null,
+      "publication_month": "2013-08",
+      "downloaded_at_utc": "2026-10-31T08:27:31.495978+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc7009.txt",
+      "content_type": "text/plain",
+      "size_bytes": 23517,
+      "sha256": "b2f346d5a87ba9d7f09047901257a65f7ac0b26352095969c25821afab447829",
+      "extracted_characters": 23517,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "ietf-rfc-7662",
+      "file": "documents/txt/rfc7662.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "RFC 7662: OAuth 2.0 Token Introspection",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc7662.txt",
+        "product": "OAuth 2.0",
+        "version": "RFC 7662",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "checking token status and troubleshooting access"
+      ],
+      "note": null,
+      "publication_month": "2015-10",
+      "downloaded_at_utc": "2026-10-31T08:27:31.794520+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc7662.txt",
+      "content_type": "text/plain",
+      "size_bytes": 36591,
+      "sha256": "2b7d688cb849f093e860557ac97e6cddac2556d69a4386561b22cdf97bf13657",
+      "extracted_characters": 36591,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "ietf-rfc-8628",
+      "file": "documents/txt/rfc8628.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "RFC 8628: OAuth 2.0 Device Authorization Grant",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc8628.txt",
+        "product": "OAuth 2.0",
+        "version": "RFC 8628",
+        "environment": null,
+        "family_id": "oauth-standards",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "device sign-in and polling errors"
+      ],
+      "note": null,
+      "publication_month": "2019-08",
+      "downloaded_at_utc": "2026-10-31T08:27:32.449510+00:00",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc8628.txt",
+      "content_type": "text/plain",
+      "size_bytes": 46718,
+      "sha256": "ebd3c37415aa665b55b412fccd9571943e8dbd3f2bf0b18fee4924264252decd",
+      "extracted_characters": 46718,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "entra-concept-sspr-howitworks",
+      "file": "documents/md/concept-sspr-howitworks.md",
+      "format": "markdown",
+      "metadata": {
+        "title": "How it works: Microsoft Entra self-service password reset",
+        "source_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/concept-sspr-howitworks.md",
+        "product": "Microsoft Entra ID",
+        "version": null,
+        "environment": null,
+        "family_id": "entra-self-service-password-reset",
+        "published_at": "2026-10-05",
+        "origin": "public"
+      },
+      "topics": [
+        "password reset workflow and configuration"
+      ],
+      "note": "Original Markdown retained, including front matter and Microsoft Learn directives. Linked includes and images are not bundled.",
+      "display_url": "https://learn.microsoft.com/en-us/entra/identity/authentication/concept-sspr-howitworks",
+      "github_commit": "7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4",
+      "date_note": "Microsoft ms.date metadata; may represent last update rather than first publication.",
+      "unbundled_include_directives": [],
+      "downloaded_at_utc": "2026-10-31T08:27:32.381514+00:00",
+      "resolved_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/concept-sspr-howitworks.md",
+      "content_type": "text/plain",
+      "size_bytes": 21099,
+      "sha256": "89330dbd9f867a9fe6b89de7cf713591c86d4036cd88a5c2a869cb03a550e76d",
+      "extracted_characters": 21099,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "entra-concept-sspr-policy",
+      "file": "documents/md/concept-sspr-policy.md",
+      "format": "markdown",
+      "metadata": {
+        "title": "Password policies and account restrictions in Microsoft Entra ID",
+        "source_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/concept-sspr-policy.md",
+        "product": "Microsoft Entra ID",
+        "version": null,
+        "environment": null,
+        "family_id": "entra-self-service-password-reset",
+        "published_at": "2026-05-26",
+        "origin": "public"
+      },
+      "topics": [
+        "password rules and account restrictions"
+      ],
+      "note": "Original Markdown retained, including front matter and Microsoft Learn directives. Linked includes and images are not bundled.",
+      "display_url": "https://learn.microsoft.com/en-us/entra/identity/authentication/concept-sspr-policy",
+      "github_commit": "7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4",
+      "date_note": "Microsoft ms.date metadata; may represent last update rather than first publication.",
+      "unbundled_include_directives": [],
+      "downloaded_at_utc": "2026-10-31T08:27:32.431512+00:00",
+      "resolved_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/concept-sspr-policy.md",
+      "content_type": "text/plain",
+      "size_bytes": 17780,
+      "sha256": "5b195fd5e167d0852dd980121ab7e5ab4b3d21089812b7a1e92d0fab6b888c52",
+      "extracted_characters": 17774,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "entra-troubleshoot-sspr",
+      "file": "documents/md/troubleshoot-sspr.md",
+      "format": "markdown",
+      "metadata": {
+        "title": "Troubleshoot self-service password reset in Microsoft Entra ID",
+        "source_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/troubleshoot-sspr.md",
+        "product": "Microsoft Entra ID",
+        "version": null,
+        "environment": null,
+        "family_id": "entra-self-service-password-reset",
+        "published_at": "2025-06-06",
+        "origin": "public"
+      },
+      "topics": [
+        "reset failures and support troubleshooting"
+      ],
+      "note": "Original Markdown retained, including front matter and Microsoft Learn directives. Linked includes and images are not bundled.",
+      "display_url": "https://learn.microsoft.com/en-us/entra/identity/authentication/troubleshoot-sspr",
+      "github_commit": "7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4",
+      "date_note": "Microsoft ms.date metadata; may represent last update rather than first publication.",
+      "unbundled_include_directives": [],
+      "downloaded_at_utc": "2026-10-31T08:27:32.422513+00:00",
+      "resolved_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/troubleshoot-sspr.md",
+      "content_type": "text/plain",
+      "size_bytes": 19667,
+      "sha256": "fbfbe02502435423f862dc804b469dc865861b5469f6c0db0cc467dfa6f4e383",
+      "extracted_characters": 19667,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "entra-troubleshoot-sspr-writeback",
+      "file": "documents/md/troubleshoot-sspr-writeback.md",
+      "format": "markdown",
+      "metadata": {
+        "title": "Troubleshoot self-service password reset writeback",
+        "source_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/troubleshoot-sspr-writeback.md",
+        "product": "Microsoft Entra ID",
+        "version": null,
+        "environment": null,
+        "family_id": "entra-self-service-password-reset",
+        "published_at": "2025-03-04",
+        "origin": "public"
+      },
+      "topics": [
+        "hybrid cloud and on-premises troubleshooting"
+      ],
+      "note": "Original Markdown retained, including front matter and Microsoft Learn directives. Linked includes and images are not bundled.",
+      "display_url": "https://learn.microsoft.com/en-us/entra/identity/authentication/troubleshoot-sspr-writeback",
+      "github_commit": "7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4",
+      "date_note": "Microsoft ms.date metadata; may represent last update rather than first publication.",
+      "unbundled_include_directives": [],
+      "downloaded_at_utc": "2026-10-31T08:27:32.865515+00:00",
+      "resolved_url": "https://raw.githubusercontent.com/MicrosoftDocs/entra-docs/7f78b50dce9d8cf119de57cbd6fd66e24a6c58d4/docs/identity/authentication/troubleshoot-sspr-writeback.md",
+      "content_type": "text/plain",
+      "size_bytes": 44434,
+      "sha256": "88d033b167bae74c90482b4ba16f41376c72696c9ee7b3a92285087a0a382a66",
+      "extracted_characters": 44432,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "azure-spending-limit",
+      "file": "documents/html/azure-spending-limit.html",
+      "format": "html",
+      "metadata": {
+        "title": "Azure spending limit",
+        "source_url": "https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/spending-limit",
+        "product": "Microsoft Azure",
+        "version": null,
+        "environment": null,
+        "family_id": "azure-subscription-support",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "spending limits and subscription type differences"
+      ],
+      "note": "Original HTML snapshot, including site navigation and scripts. Ingestion should retain the main article and its tables/headings.",
+      "downloaded_at_utc": "2026-10-31T08:27:33.034510+00:00",
+      "resolved_url": "https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/spending-limit",
+      "content_type": "text/html",
+      "size_bytes": 58196,
+      "sha256": "f91d310fa23fb76240c118f5e5125809d265e3452877ca6ee9b429f55f5d6140",
+      "extracted_characters": 8331,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "azure-invoice",
+      "file": "documents/html/azure-download-invoice.html",
+      "format": "html",
+      "metadata": {
+        "title": "View and download your Microsoft Azure invoice",
+        "source_url": "https://learn.microsoft.com/en-us/azure/cost-management-billing/understand/download-azure-invoice",
+        "product": "Microsoft Azure",
+        "version": null,
+        "environment": null,
+        "family_id": "azure-subscription-support",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "billing invoices and billing account permissions"
+      ],
+      "note": "Original HTML snapshot, including site navigation and scripts. Ingestion should retain the main article and its tables/headings.",
+      "downloaded_at_utc": "2026-10-31T08:27:33.494514+00:00",
+      "resolved_url": "https://learn.microsoft.com/en-us/azure/cost-management-billing/understand/download-azure-invoice",
+      "content_type": "text/html",
+      "size_bytes": 78106,
+      "sha256": "d74ae188d7e564748834f43dc92016defc920cb3b1ee11232e21835835ce0c88",
+      "extracted_characters": 18333,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "azure-disabled-subscription",
+      "file": "documents/html/azure-subscription-disabled.html",
+      "format": "html",
+      "metadata": {
+        "title": "Reactivate a disabled Azure subscription",
+        "source_url": "https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/subscription-disabled",
+        "product": "Microsoft Azure",
+        "version": null,
+        "environment": null,
+        "family_id": "azure-subscription-support",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "billing and access troubleshooting"
+      ],
+      "note": "Original HTML snapshot, including site navigation and scripts. Ingestion should retain the main article and its tables/headings.",
+      "downloaded_at_utc": "2026-10-31T08:27:33.050515+00:00",
+      "resolved_url": "https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/subscription-disabled",
+      "content_type": "text/html",
+      "size_bytes": 54828,
+      "sha256": "7ee4348978ece5f036f7f8cfcec2cc4aa2d59a00c2e3c95e0c514dbb72f55a85",
+      "extracted_characters": 6639,
+      "modified": false,
+      "physical_pdf_pages": null
+    },
+    {
+      "source_id": "azure-quotas",
+      "file": "documents/html/azure-quotas-overview.html",
+      "format": "html",
+      "metadata": {
+        "title": "Quotas overview",
+        "source_url": "https://learn.microsoft.com/en-us/azure/quotas/quotas-overview",
+        "product": "Microsoft Azure",
+        "version": null,
+        "environment": null,
+        "family_id": "azure-subscription-support",
+        "published_at": null,
+        "origin": "public"
+      },
+      "topics": [
+        "usage limits and quota configuration"
+      ],
+      "note": "Original HTML snapshot, including site navigation and scripts. Ingestion should retain the main article and its tables/headings.",
+      "downloaded_at_utc": "2026-10-31T08:27:33.446519+00:00",
+      "resolved_url": "https://learn.microsoft.com/en-us/azure/quotas/quotas-overview",
+      "content_type": "text/html",
+      "size_bytes": 52200,
+      "sha256": "259bad7e9a80fbc2df42c57ca9abe26e1797793b3c984390525093914fcd0b99",
+      "extracted_characters": 5462,
+      "modified": false,
+      "physical_pdf_pages": null
+    }
+  ]
+}

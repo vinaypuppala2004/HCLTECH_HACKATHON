@@ -42,8 +42,14 @@ version_difference requires the same document family/product/environment and
 different explicit versions. Keep unresolved contradictions visible. Resolve a
 conflict by context only when explicit user scope distinguishes its sides; select
 only applicable side passage IDs. Never assume that the latest version wins.
+When explicit scope selects a version, answer using that version's applicable
+excerpts. Other-version comparison evidence does not prevent a scoped answer.
 If missing product/version/environment context could change the answer, return
 needs_context with a concrete question and options from the source metadata.
+Request a scope field ONLY when missing_scope_options lists at least two real
+choices for that field. Never ask for a version when sources have no version
+metadata. For broad questions, give the supported general answer and preserve
+conditions from the evidence rather than inventing a required scope field.
 For an explicit comparison, describe the contexts and retain conflict evidence.
 answered requires supported claims. conflict requires unresolved conflicts and
 no factual answer claims. not_found has no claims and fallback_reason=no_support.
@@ -52,11 +58,39 @@ fallback_reason=weak_evidence. Evidence marked truncated is only an excerpt;
 do not infer facts from omitted text. Do not expose private thinking.
 """
 _STOPWORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does", "for", "from",
-    "how", "i", "in", "is", "it", "my", "of", "on", "or", "the", "to", "what", "when",
-    "where", "which", "with",
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "can",
+    "do",
+    "does",
+    "for",
+    "from",
+    "how",
+    "i",
+    "in",
+    "is",
+    "it",
+    "my",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "what",
+    "when",
+    "where",
+    "which",
+    "with",
 }
-_COMPARISON = re.compile(r"\b(compare|comparison|differences?|versus|vs|between|changed|changes)\b", re.I)
+_COMPARISON = re.compile(
+    r"\b(compare|comparison|differences?|versus|vs|between|changed|changes)\b", re.I
+)
 _QUESTIONS = {
     "product": "Which product should this answer apply to?",
     "version": "Which version should this answer apply to?",
@@ -66,8 +100,11 @@ _QUESTIONS = {
 
 def _empty_draft(status: str, reason: str | None, *, conflicts=None, clarification=None) -> Draft:
     return Draft(
-        status=status, claims=[], conflicts=list(conflicts or []),
-        clarification=clarification, fallback_reason=reason,
+        status=status,
+        claims=[],
+        conflicts=list(conflicts or []),
+        clarification=clarification,
+        fallback_reason=reason,
     )
 
 
@@ -77,7 +114,8 @@ def _excerpt(text: str, budget: int, question: str) -> str:
     terms = sorted(set(tokenize(question)) - _STOPWORDS)
     positions = [
         match.start()
-        for term in terms if len(term) >= 3
+        for term in terms
+        if len(term) >= 3
         for match in [re.search(re.escape(term), text, flags=re.I)]
         if match is not None
     ]
@@ -105,9 +143,10 @@ def _context_question(request: DraftInput, hits: list[Hit]) -> Clarification | N
         choices = _options(hits, field)
         if len(choices) < 2:
             continue
-        if field == "version" and len({
-            " ".join(hit.passage.text.split()).casefold() for hit in hits
-        }) == 1:
+        if (
+            field == "version"
+            and len({" ".join(hit.passage.text.split()).casefold() for hit in hits}) == 1
+        ):
             continue
         return Clarification(field=field, question=_QUESTIONS[field], options=choices)
     return None
@@ -129,7 +168,9 @@ class GroundedDraftAnswer:
         ):
             raise ValueError("Draft prompt budget must be a positive integer.")
         self._generate = generate
-        self._budget = min(available, max_prompt_bytes if max_prompt_bytes is not None else available)
+        self._budget = min(
+            available, max_prompt_bytes if max_prompt_bytes is not None else available
+        )
 
     def __call__(self, request: DraftInput) -> Envelope[Draft]:
         if not request.retrieval.hits:
@@ -137,10 +178,14 @@ class GroundedDraftAnswer:
         try:
             hits = self._evidence(request)
         except ValueError:
-            return failure("BAD_INPUT", "Retrieved evidence has inconsistent or duplicate source identifiers.")
+            return failure(
+                "BAD_INPUT", "Retrieved evidence has inconsistent or duplicate source identifiers."
+            )
         if not hits:
             return success(_empty_draft("insufficient_evidence", "weak_evidence"))
         ambiguity = _context_question(request, hits)
+        if ambiguity is not None:
+            return success(_empty_draft("needs_context", None, clarification=ambiguity))
         if not any(hit.applicable for hit in hits):
             if ambiguity is not None:
                 return success(_empty_draft("needs_context", None, clarification=ambiguity))
@@ -148,21 +193,37 @@ class GroundedDraftAnswer:
         try:
             payload, visible = self._context_payload(request, hits)
         except (ValueError, UnicodeError):
-            return failure("BAD_INPUT", "Question and evidence exceed the generation context budget.")
-        response = self._generate(GenerationInput(
-            messages=[
-                GenerationMessage(role="system", content=_SYSTEM),
-                GenerationMessage(role="user", content=payload),
-            ],
-            response_schema=Draft.model_json_schema(),
-        ))
+            return failure(
+                "BAD_INPUT", "Question and evidence exceed the generation context budget."
+            )
+        response = self._generate(
+            GenerationInput(
+                messages=[
+                    GenerationMessage(role="system", content=_SYSTEM),
+                    GenerationMessage(role="user", content=payload),
+                ],
+                response_schema=Draft.model_json_schema(),
+            )
+        )
         if not response.ok or response.data is None:
             return response
         if response.data.model != GENERATION_MODEL or not response.data.model_digest.strip():
-            return failure("INVALID_MODEL_OUTPUT", "Draft generation must identify the configured Qwen model.")
+            return failure(
+                "INVALID_MODEL_OUTPUT", "Draft generation must identify the configured Qwen model."
+            )
         conflicts: list[Conflict] = []
         try:
             draft = Draft.model_validate(response.data.content)
+            aliases = {f"source_{i}": hit.passage.passage_id for i, hit in enumerate(hits, 1)}
+            for claim in draft.claims:
+                for support in claim.supports:
+                    support.passage_id = aliases[support.passage_id]
+            for conflict in draft.conflicts:
+                for support in conflict.sides:
+                    support.passage_id = aliases[support.passage_id]
+                conflict.selected_passage_ids = [
+                    aliases[key] for key in conflict.selected_passage_ids
+                ]
             by_id = {hit.passage.passage_id: hit for hit in hits}
             self._unique_ids([conflict.conflict_id for conflict in draft.conflicts])
             invalid_conflict = False
@@ -172,50 +233,70 @@ class GroundedDraftAnswer:
                 except ValueError:
                     invalid_conflict = True
             if invalid_conflict:
-                return success(_empty_draft(
-                    "insufficient_evidence", "failed_verification", conflicts=conflicts
-                ))
+                return success(
+                    _empty_draft(
+                        "insufficient_evidence", "failed_verification", conflicts=conflicts
+                    )
+                )
             if ambiguity is not None:
-                return success(_empty_draft(
-                    "needs_context", None, conflicts=conflicts, clarification=ambiguity
-                ))
+                return success(
+                    _empty_draft(
+                        "needs_context", None, conflicts=conflicts, clarification=ambiguity
+                    )
+                )
             if draft.clarification is not None:
                 field = draft.clarification.field
                 if getattr(request.query.context, field) is not None:
                     raise ValueError("A supplied scope field cannot be requested again.")
+                choices = _options(hits, field)
+                if len(choices) < 2:
+                    raise ValueError("Clarification requires distinct known source scope options.")
                 clarification = Clarification(
-                    field=field, question=_QUESTIONS[field], options=_options(hits, field)
+                    field=field, question=_QUESTIONS[field], options=choices
                 )
-                return success(_empty_draft(
-                    "needs_context", None, conflicts=conflicts, clarification=clarification
-                ))
+                return success(
+                    _empty_draft(
+                        "needs_context", None, conflicts=conflicts, clarification=clarification
+                    )
+                )
             if any(conflict.resolution == "unresolved" for conflict in conflicts):
                 return success(_empty_draft("conflict", None, conflicts=conflicts))
             self._claim_citations(draft, by_id, visible)
             if draft.status in ("not_found", "insufficient_evidence"):
-                return success(_empty_draft(
-                    draft.status,
-                    "no_support" if draft.status == "not_found" else "weak_evidence",
-                    conflicts=conflicts,
-                ))
+                return success(
+                    _empty_draft(
+                        draft.status,
+                        "no_support" if draft.status == "not_found" else "weak_evidence",
+                        conflicts=conflicts,
+                    )
+                )
             if draft.status == "needs_context":
                 raise ValueError("Clarification status requires a clarification.")
             if not draft.claims:
-                return success(_empty_draft("insufficient_evidence", "weak_evidence", conflicts=conflicts))
-            return success(Draft(
-                status="answered", claims=draft.claims, conflicts=conflicts,
-                clarification=None, fallback_reason=None,
-            ))
+                return success(
+                    _empty_draft("insufficient_evidence", "weak_evidence", conflicts=conflicts)
+                )
+            return success(
+                Draft(
+                    status="answered",
+                    claims=draft.claims,
+                    conflicts=conflicts,
+                    clarification=None,
+                    fallback_reason=None,
+                )
+            )
         except (ValidationError, ValueError, KeyError, TypeError):
-            return success(_empty_draft(
-                "insufficient_evidence", "failed_verification", conflicts=conflicts
-            ))
+            return success(
+                _empty_draft("insufficient_evidence", "failed_verification", conflicts=conflicts)
+            )
 
     @staticmethod
     def _evidence(request: DraftInput) -> list[Hit]:
         result = []
         seen = set()
-        for original in sorted(request.retrieval.hits, key=lambda hit: (hit.rank, hit.passage.passage_id)):
+        for original in sorted(
+            request.retrieval.hits, key=lambda hit: (hit.rank, hit.passage.passage_id)
+        ):
             passage = original.passage
             if (
                 not passage.passage_id.strip()
@@ -227,26 +308,29 @@ class GroundedDraftAnswer:
             if not passage.text.strip():
                 continue
             hit = original.model_copy(deep=True)
-            hit.applicable = original.applicable and matches_scope(original.document, request.query.context)
+            hit.applicable = original.applicable and matches_scope(
+                original.document, request.query.context
+            )
             result.append(hit)
         return result
 
     def _context_payload(self, request: DraftInput, hits: list[Hit]) -> tuple[str, dict[str, str]]:
         records = []
-        for hit in hits:
+        for i, hit in enumerate(hits, 1):
             metadata = hit.document.metadata
-            records.append({
-                "passage_id": hit.passage.passage_id,
-                "document_id": hit.document.document_id,
-                "product": metadata.product,
-                "version": metadata.version,
-                "environment": metadata.environment,
-                "family_id": metadata.family_id,
-                "section_path": hit.passage.section_path,
-                "applicable": hit.applicable,
-                "text": "",
-                "truncated": False,
-            })
+            records.append(
+                {
+                    "passage_id": f"source_{i}",
+                    "product": metadata.product,
+                    "version": metadata.version,
+                    "environment": metadata.environment,
+                    "family_id": metadata.family_id,
+                    "section_path": hit.passage.section_path,
+                    "applicable": hit.applicable,
+                    "text": "",
+                    "truncated": False,
+                }
+            )
         data = {
             "question": request.query.question,
             "context": request.query.context.model_dump(mode="json"),
@@ -310,43 +394,51 @@ class GroundedDraftAnswer:
         if not conflict.topic.strip():
             raise ValueError("Conflict topic cannot be blank.")
         sides = [self._support(support, hits, visible) for support in conflict.sides]
-        if len({(support.passage_id, support.quote) for support in conflict.sides}) < 2 or len({
-            " ".join(support.quote.split()).casefold() for support in conflict.sides
-        }) < 2:
+        if (
+            len({(support.passage_id, support.quote) for support in conflict.sides}) < 2
+            or len({" ".join(support.quote.split()).casefold() for support in conflict.sides}) < 2
+        ):
             raise ValueError("A conflict requires distinct quoted statements.")
         if conflict.kind == "version_difference":
             families = {hit.document.metadata.family_id for hit in sides}
             versions = {hit.document.metadata.version for hit in sides}
             family = next(iter(families)) if len(families) == 1 else None
             if (
-                not family or not family.strip()
+                not family
+                or not family.strip()
                 or any(version is None or not version.strip() for version in versions)
                 or len(versions) < 2
             ):
-                raise ValueError("Version differences require one family and different explicit versions.")
+                raise ValueError(
+                    "Version differences require one family and different explicit versions."
+                )
             for field in ("product", "environment"):
                 values = {getattr(hit.document.metadata, field) for hit in sides}
                 normalized = {value.casefold() if value is not None else None for value in values}
                 if len(normalized) != 1:
-                    raise ValueError("Version differences cannot conflate products or environments.")
-        applicable = list(dict.fromkeys(
-            hit.passage.passage_id for hit in sides if hit.applicable
-        ))
+                    raise ValueError(
+                        "Version differences cannot conflate products or environments."
+                    )
+        applicable = list(dict.fromkeys(hit.passage.passage_id for hit in sides if hit.applicable))
         inapplicable = any(not hit.applicable for hit in sides)
         distinguishing_scope = any(
             getattr(request.query.context, field) is not None
-            and len({
-                (getattr(hit.document.metadata, field) or "").casefold()
-                if field != "version" else getattr(hit.document.metadata, field)
-                for hit in sides
-            }) > 1
+            and len(
+                {
+                    (getattr(hit.document.metadata, field) or "").casefold()
+                    if field != "version"
+                    else getattr(hit.document.metadata, field)
+                    for hit in sides
+                }
+            )
+            > 1
             for field in ("product", "version", "environment")
         )
-        resolved = (
-            conflict.resolution == "resolved_by_context"
-            and bool(applicable) and inapplicable and distinguishing_scope
+        resolved = bool(applicable) and inapplicable and distinguishing_scope
+        return conflict.model_copy(
+            update={
+                "resolution": "resolved_by_context" if resolved else "unresolved",
+                "selected_passage_ids": applicable if resolved else [],
+            },
+            deep=True,
         )
-        return conflict.model_copy(update={
-            "resolution": "resolved_by_context" if resolved else "unresolved",
-            "selected_passage_ids": applicable if resolved else [],
-        }, deep=True)

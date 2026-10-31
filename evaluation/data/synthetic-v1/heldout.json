@@ -1,0 +1,295 @@
+[
+  {
+    "case_id": "held_01",
+    "family_id": "service_token_rotation",
+    "category": "direct",
+    "query": {
+      "question": "How do I rotate a service token in AtlasDesk 2.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 2.0 production, rotate a service token from Integrations > Tokens > Rotate.",
+          "supports": [
+            {
+              "passage_id": "eval_service_token_v2",
+              "quote": "In AtlasDesk 2.0 production, rotate a service token from Integrations > Tokens > Rotate."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_service_token_v2"
+    ],
+    "rationale": "The source explicitly gives the service-token rotation path; this topic is held out."
+  },
+  {
+    "case_id": "held_02",
+    "family_id": "attachment_size",
+    "category": "direct",
+    "query": {
+      "question": "What is the maximum attachment size in AtlasDesk 2.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 2.0 production allows attachments up to 12 MB.",
+          "supports": [
+            {
+              "passage_id": "eval_attachment_v2",
+              "quote": "AtlasDesk 2.0 production allows attachments up to 12 MB."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_attachment_v2"
+    ],
+    "rationale": "The scoped source explicitly states the 12 MB attachment limit."
+  },
+  {
+    "case_id": "held_03",
+    "family_id": "service_token_rotation",
+    "category": "paraphrase",
+    "query": {
+      "question": "I need to replace an AtlasDesk 2.0 production integration credential. Where is service-token rotation?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 2.0 production, rotate a service token from Integrations > Tokens > Rotate.",
+          "supports": [
+            {
+              "passage_id": "eval_service_token_v2",
+              "quote": "In AtlasDesk 2.0 production, rotate a service token from Integrations > Tokens > Rotate."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_service_token_v2"
+    ],
+    "rationale": "Same intent as held_01; both related questions stay held out to avoid a development paraphrase leak."
+  },
+  {
+    "case_id": "held_04",
+    "family_id": "attachment_size",
+    "category": "paraphrase",
+    "query": {
+      "question": "How large a file can I attach in AtlasDesk 2.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 2.0 production allows attachments up to 12 MB.",
+          "supports": [
+            {
+              "passage_id": "eval_attachment_v2",
+              "quote": "AtlasDesk 2.0 production allows attachments up to 12 MB."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_attachment_v2"
+    ],
+    "rationale": "Same intent as held_02; both related questions stay held out."
+  },
+  {
+    "case_id": "held_05",
+    "family_id": "session_timeout",
+    "category": "conflict_version",
+    "query": {
+      "question": "For AtlasDesk 2.0 production, what inactivity timeout applies, and how does it differ from 1.0?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 2.0 production sessions time out after 45 minutes of inactivity.",
+          "supports": [
+            {
+              "passage_id": "eval_session_timeout_v2",
+              "quote": "AtlasDesk 2.0 production sessions time out after 45 minutes of inactivity."
+            }
+          ]
+        }
+      ],
+      "conflicts": [
+        {
+          "conflict_id": "gold_conflict_1",
+          "kind": "version_difference",
+          "topic": "Session inactivity timeout",
+          "sides": [
+            {
+              "passage_id": "eval_session_timeout_v1",
+              "quote": "AtlasDesk 1.0 production sessions time out after 20 minutes of inactivity."
+            },
+            {
+              "passage_id": "eval_session_timeout_v2",
+              "quote": "AtlasDesk 2.0 production sessions time out after 45 minutes of inactivity."
+            }
+          ],
+          "resolution": "resolved_by_context",
+          "selected_passage_ids": [
+            "eval_session_timeout_v2"
+          ]
+        }
+      ],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_session_timeout_v1",
+      "eval_session_timeout_v2"
+    ],
+    "rationale": "Version 2.0 selects 45 minutes; expose the 1.0 counterpart's 20 minutes without treating two versions as an unresolved contradiction."
+  },
+  {
+    "case_id": "held_06",
+    "family_id": "audit_deletion",
+    "category": "conflict_version",
+    "query": {
+      "question": "Can workspace administrators manually delete AtlasDesk 2.0 production audit entries?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "conflict",
+      "claims": [],
+      "conflicts": [
+        {
+          "conflict_id": "gold_conflict_1",
+          "kind": "contradiction",
+          "topic": "Manual audit deletion",
+          "sides": [
+            {
+              "passage_id": "eval_audit_policy",
+              "quote": "In AtlasDesk 2.0 production, audit entries cannot be deleted manually."
+            },
+            {
+              "passage_id": "eval_audit_memo",
+              "quote": "In AtlasDesk 2.0 production, workspace administrators can delete audit entries manually."
+            }
+          ],
+          "resolution": "unresolved",
+          "selected_passage_ids": []
+        }
+      ],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_audit_policy",
+      "eval_audit_memo"
+    ],
+    "rationale": "Same scope has conflicting deletion policies and no stated authority ordering; show both exact excerpts without choosing."
+  },
+  {
+    "case_id": "held_07",
+    "family_id": "sharing_link_expiry",
+    "category": "ambiguous",
+    "query": {
+      "question": "When do sharing links expire in version 2.0 production?",
+      "context": {
+        "product": null,
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "needs_context",
+      "claims": [],
+      "conflicts": [],
+      "clarification": {
+        "field": "product",
+        "question": "Are you using AtlasDesk or BorealDesk?",
+        "options": [
+          "AtlasDesk",
+          "BorealDesk"
+        ]
+      },
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_sharing_atlas",
+      "eval_sharing_boreal"
+    ],
+    "rationale": "Product is missing and changes sharing-link lifetime; ask for product context."
+  },
+  {
+    "case_id": "held_08",
+    "family_id": "invoice_signing",
+    "category": "unsupported",
+    "query": {
+      "question": "How do I digitally sign invoice PDFs in AtlasDesk 2.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "not_found",
+      "claims": [],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": "no_support"
+    },
+    "relevant_passage_ids": [],
+    "rationale": "No passage describes invoices or digital signatures. Attachment limits do not support PDF-signing instructions."
+  }
+]

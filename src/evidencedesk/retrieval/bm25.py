@@ -20,7 +20,9 @@ class BM25Corpus:
             raise ValueError("BM25 requires k1 > 0 and 0 <= b <= 1.")
         self._k1 = k1
         self._b = b
-        self._counts = {passage_id: Counter(tokenize(text)) for passage_id, text in passages.items()}
+        self._counts = {
+            passage_id: Counter(tokenize(text)) for passage_id, text in passages.items()
+        }
         self._lengths = {
             passage_id: sum(counts.values()) for passage_id, counts in self._counts.items()
         }
@@ -37,8 +39,7 @@ class BM25Corpus:
         if average_length == 0:
             return scores
         frequencies = {
-            term: sum(term in self._counts[passage_id] for passage_id in eligible)
-            for term in terms
+            term: sum(term in self._counts[passage_id] for passage_id in eligible) for term in terms
         }
         for passage_id in eligible:
             counts = self._counts[passage_id]

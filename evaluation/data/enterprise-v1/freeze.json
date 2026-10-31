@@ -1,0 +1,20 @@
+{
+  "dataset_id": "enterprise-v1",
+  "frozen_on": "2026-10-31",
+  "case_count": 25,
+  "development_count": 17,
+  "heldout_count": 8,
+  "heldout_case_ids": [
+    "enterprise_03",
+    "enterprise_06",
+    "enterprise_13",
+    "enterprise_14",
+    "enterprise_18",
+    "enterprise_19",
+    "enterprise_23",
+    "enterprise_24"
+  ],
+  "cases_sha256": "763b85dd59e359efbc595b1cf8c6e1c40c72bcf8676b5f62945911dba0d73901",
+  "provenance_sha256": "c78190cf1bc4531974cb61bf2ada3811216e6c64b9da0cd2f497538e55ae11c7",
+  "review_sha256": "dfd1f5a9bdfad29fd19dac9462909f1610fc5305994cd18476c9d06918b8a864"
+}

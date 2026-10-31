@@ -1,0 +1,279 @@
+{
+  "documents": [
+    {
+      "document_id": "doc_eval_atlas_v1",
+      "filename": "doc_eval_atlas_v1.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "Synthetic AtlasDesk 1.0 Production Guide",
+        "source_url": null,
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production",
+        "family_id": "atlasdesk-guide",
+        "published_at": null,
+        "origin": "synthetic"
+      },
+      "sha256": "69428b4c719e5d4fb1ee5a6b9552132ace7914f54c08e5d37f8cdb469f85e718",
+      "passage_count": 9
+    },
+    {
+      "document_id": "doc_eval_atlas_v2",
+      "filename": "doc_eval_atlas_v2.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "Synthetic AtlasDesk 2.0 Production Guide",
+        "source_url": null,
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production",
+        "family_id": "atlasdesk-guide",
+        "published_at": null,
+        "origin": "synthetic"
+      },
+      "sha256": "7647bc69169a44cbc537946aa42b7d0bf31c580a179886886a2f0a55c2ab8b23",
+      "passage_count": 6
+    },
+    {
+      "document_id": "doc_eval_maintenance_memo",
+      "filename": "doc_eval_maintenance_memo.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "Synthetic Maintenance Memo",
+        "source_url": null,
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production",
+        "family_id": "atlasdesk-guide",
+        "published_at": null,
+        "origin": "synthetic"
+      },
+      "sha256": "0f54e94daa300ec73cf898b18a6c10ce1fac66385fb16d874905dad347798cbd",
+      "passage_count": 1
+    },
+    {
+      "document_id": "doc_eval_atlas_sandbox",
+      "filename": "doc_eval_atlas_sandbox.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "Synthetic AtlasDesk Sandbox Guide",
+        "source_url": null,
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "sandbox",
+        "family_id": "atlasdesk-guide",
+        "published_at": null,
+        "origin": "synthetic"
+      },
+      "sha256": "003863220be5eeb3a21ddd995b5bd9340b8fb79f99183965faccdcbe96bb56a1",
+      "passage_count": 1
+    },
+    {
+      "document_id": "doc_eval_audit_memo",
+      "filename": "doc_eval_audit_memo.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "Synthetic Audit Memo",
+        "source_url": null,
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production",
+        "family_id": "atlasdesk-guide",
+        "published_at": null,
+        "origin": "synthetic"
+      },
+      "sha256": "d5d5313f346a6038d6b3077c3a96ed32a18019b21296de9324e6f634bef8d10b",
+      "passage_count": 1
+    },
+    {
+      "document_id": "doc_eval_boreal_v2",
+      "filename": "doc_eval_boreal_v2.txt",
+      "format": "txt",
+      "metadata": {
+        "title": "Synthetic BorealDesk 2.0 Guide",
+        "source_url": null,
+        "product": "BorealDesk",
+        "version": "2.0",
+        "environment": "production",
+        "family_id": "borealdesk-guide",
+        "published_at": null,
+        "origin": "synthetic"
+      },
+      "sha256": "781308b57dd63b1fba1398e26c9d8dc76fe8ad614a57620e35d82515164f799b",
+      "passage_count": 1
+    }
+  ],
+  "passages": [
+    {
+      "passage_id": "eval_reset_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Password reset"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 1.0 production, reset your password from Account > Security > Reset password."
+    },
+    {
+      "passage_id": "eval_unlock_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Suspended accounts"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 1.0 production, ask a workspace administrator to unlock a suspended account."
+    },
+    {
+      "passage_id": "eval_csv_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "CSV export"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 1.0 production, export a project as CSV from Project > Export > CSV."
+    },
+    {
+      "passage_id": "eval_retention_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Incident history"
+      ],
+      "page": null,
+      "text": "AtlasDesk 1.0 production keeps incident history for 14 days."
+    },
+    {
+      "passage_id": "eval_logs_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Diagnostics"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 1.0 production, download diagnostics from Help > Diagnostics > Download logs."
+    },
+    {
+      "passage_id": "eval_key_expiry_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "API key lifetime"
+      ],
+      "page": null,
+      "text": "AtlasDesk 1.0 production API keys expire after 30 days."
+    },
+    {
+      "passage_id": "eval_maintenance_policy",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Maintenance window"
+      ],
+      "page": null,
+      "text": "The AtlasDesk 1.0 production maintenance window starts at 02:00 UTC on Sundays."
+    },
+    {
+      "passage_id": "eval_restore_production",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Backup restoration"
+      ],
+      "page": null,
+      "text": "To restore an AtlasDesk 1.0 production backup, open a support ticket."
+    },
+    {
+      "passage_id": "eval_session_timeout_v1",
+      "document_id": "doc_eval_atlas_v1",
+      "section_path": [
+        "Session timeout"
+      ],
+      "page": null,
+      "text": "AtlasDesk 1.0 production sessions time out after 20 minutes of inactivity."
+    },
+    {
+      "passage_id": "eval_retention_v2",
+      "document_id": "doc_eval_atlas_v2",
+      "section_path": [
+        "Incident history"
+      ],
+      "page": null,
+      "text": "AtlasDesk 2.0 production keeps incident history for 30 days."
+    },
+    {
+      "passage_id": "eval_service_token_v2",
+      "document_id": "doc_eval_atlas_v2",
+      "section_path": [
+        "Service token rotation"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 2.0 production, rotate a service token from Integrations > Tokens > Rotate."
+    },
+    {
+      "passage_id": "eval_attachment_v2",
+      "document_id": "doc_eval_atlas_v2",
+      "section_path": [
+        "Attachment size"
+      ],
+      "page": null,
+      "text": "AtlasDesk 2.0 production allows attachments up to 12 MB."
+    },
+    {
+      "passage_id": "eval_session_timeout_v2",
+      "document_id": "doc_eval_atlas_v2",
+      "section_path": [
+        "Session timeout"
+      ],
+      "page": null,
+      "text": "AtlasDesk 2.0 production sessions time out after 45 minutes of inactivity."
+    },
+    {
+      "passage_id": "eval_audit_policy",
+      "document_id": "doc_eval_atlas_v2",
+      "section_path": [
+        "Audit deletion"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 2.0 production, audit entries cannot be deleted manually."
+    },
+    {
+      "passage_id": "eval_sharing_atlas",
+      "document_id": "doc_eval_atlas_v2",
+      "section_path": [
+        "Sharing link expiry"
+      ],
+      "page": null,
+      "text": "AtlasDesk 2.0 production sharing links expire after 48 hours."
+    },
+    {
+      "passage_id": "eval_maintenance_memo",
+      "document_id": "doc_eval_maintenance_memo",
+      "section_path": [
+        "Maintenance window"
+      ],
+      "page": null,
+      "text": "The AtlasDesk 1.0 production maintenance window starts at 03:00 UTC on Sundays."
+    },
+    {
+      "passage_id": "eval_restore_sandbox",
+      "document_id": "doc_eval_atlas_sandbox",
+      "section_path": [
+        "Backup restoration"
+      ],
+      "page": null,
+      "text": "To restore an AtlasDesk 1.0 sandbox backup, select Backups > Restore."
+    },
+    {
+      "passage_id": "eval_audit_memo",
+      "document_id": "doc_eval_audit_memo",
+      "section_path": [
+        "Audit deletion"
+      ],
+      "page": null,
+      "text": "In AtlasDesk 2.0 production, workspace administrators can delete audit entries manually."
+    },
+    {
+      "passage_id": "eval_sharing_boreal",
+      "document_id": "doc_eval_boreal_v2",
+      "section_path": [
+        "Sharing link expiry"
+      ],
+      "page": null,
+      "text": "BorealDesk 2.0 production sharing links expire after 72 hours."
+    }
+  ]
+}

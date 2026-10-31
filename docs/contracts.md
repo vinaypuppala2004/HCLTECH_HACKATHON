@@ -6,6 +6,31 @@ Person D owns the FastAPI implementation and dependency wiring; C owns shared
 contracts and retrieval/answer tools. D integrates B/C tools through these ports.
 FastAPI exports the public schemas at `/openapi.json` and documents them at `/docs`.
 
+## Live integration status
+
+The API supports explicit `mock` and `live` modes without changing JSON keys.
+The stub descriptions below apply to mock mode. Live mode wires validated uploads
+to the committed Qdrant index, hybrid BM25/Nomic search, grounded Qwen drafting,
+and semantic verification. `core/factory.py` owns these adapters and their close
+hooks; shutdown drains work and closes the index/client. See `live-runbook.md`.
+Health reports actual model availability, committed counts, and index readiness.
+Readiness permits an empty healthy index; search on it returns `INDEX_EMPTY`.
+
+Live ingestion enforces every documented file/batch/page/corpus limit. It uses
+4,096-character chunks with 200-character overlap and groups adjacent HTML text
+within each heading. A model length rejection retries that file at 1,800/200,
+without truncation; failed retries never mark the file ready. Duplicate identity
+includes content, format, and metadata, excluding filename. Distinct versions
+remain distinct. Renaming with unchanged content/metadata does not bump revision.
+
+Live verification first checks exact quotes, source IDs, scope applicability, and
+conflict structure. It then asks local Qwen whether the statements follow from
+the evidence. Failed/unclear checks withhold factual claims and conflicts; service
+failures retain explicit error envelopes. No-fact fallbacks have no checks and
+insufficient evidence strength. Model judgments are not a semantic guarantee or
+a Ragas quality measurement. Public passage/source IDs remain stable; short IDs
+used inside generation prompts are mapped back before returning any response.
+
 ## Conventions and envelope
 
 All listed keys are required. Nullable values use explicit JSON null. Unknown
@@ -130,7 +155,7 @@ not all enforced by the mock skeleton.
 `IngestInput` → `Envelope[IngestResult]`. Accept 1–20 file records. The stub returns
 `rejected` / `NOT_IMPLEMENTED` for each; no decoding, parsing, saving, or indexing.
 Target live limits: 10 MB decoded per file, 50 MB per batch, 100 PDF pages, and
-500 corpus passages. Only the file count is enforced in this skeleton.
+500 corpus passages. All limits are enforced in live mode.
 
 ## Tool 2: search_passages — C
 
@@ -186,8 +211,8 @@ Synthetic fixtures never claim real public URLs.
 
 Both use envelopes and have typed callable ports. The embedding port has an
 opt-in Ollama adapter in `retrieval/embeddings.py`; see `docs/embeddings.md` for
-validation, errors, locking, and the handoff to D. Generation remains unimplemented.
-The default API still uses mock tools; this adapter does not enable live search.
+validation, errors, and shared model locking. Generation uses the schema-constrained
+Qwen adapter in `assistant/generation.py`. The API factory selects these only in live mode.
 
 ```json
 {
@@ -315,7 +340,8 @@ UI processes must not open the same path. B supplies validated `Document` and
 `Envelope[IngestResult]` for one document using the existing JSON shapes.
 
 `search(QueryInput)` returns `Envelope[SearchResult]` with at most six scoped
-semantic hits. Product/environment matching is case-insensitive; version matching
-is exact. BM25 scores are null and RRF scores are zero until C2 fusion is added.
-`read_sources(SourcesInput)` returns the existing source envelope. These methods
-are opt-in; the default mock API factory has not been changed.
+hybrid hits, including BM25/cosine scores and reciprocal rank fusion. Version
+counterparts may be included for comparison but retain actual applicability.
+Product/environment matching is case-insensitive; version matching is exact.
+`read_sources(SourcesInput)` returns the existing source envelope. The live API
+factory owns this index; explicitly selected mock mode retains the fixed fixture.

@@ -86,7 +86,7 @@ class OllamaGeneration:
         client: httpx.Client,
         *,
         request_lock: Lock | None = None,
-        context_tokens: int = 8192,
+        context_tokens: int = 12288,
         max_output_tokens: int = 2048,
     ):
         if (
@@ -111,12 +111,21 @@ class OllamaGeneration:
             or not any(message.role == "user" for message in request.messages)
         ):
             return failure("BAD_INPUT", "Generation requires nonblank messages and a user message.")
-        if sum(len(message.content.encode("utf-8")) for message in request.messages) > self.max_prompt_bytes:
-            return failure("BAD_INPUT", "Prompt exceeds the configured context budget; shorten the evidence.")
+        if (
+            sum(len(message.content.encode("utf-8")) for message in request.messages)
+            > self.max_prompt_bytes
+        ):
+            return failure(
+                "BAD_INPUT", "Prompt exceeds the configured context budget; shorten the evidence."
+            )
         try:
             schema_json = json.dumps(request.response_schema, allow_nan=False)
-            if len(schema_json.encode()) > 65536 or not _local_references_only(request.response_schema):
-                return failure("BAD_INPUT", "Response schema must be bounded and use only local references.")
+            if len(schema_json.encode()) > 65536 or not _local_references_only(
+                request.response_schema
+            ):
+                return failure(
+                    "BAD_INPUT", "Response schema must be bounded and use only local references."
+                )
             Draft202012Validator.check_schema(request.response_schema)
             validator = Draft202012Validator(request.response_schema)
         except (SchemaError, ValueError, TypeError, RecursionError):
@@ -126,7 +135,10 @@ class OllamaGeneration:
         try:
             digest = self._model_digest()
             if digest is None:
-                return failure("MODEL_UNAVAILABLE", f"Required local model {GENERATION_MODEL} is not installed.")
+                return failure(
+                    "MODEL_UNAVAILABLE",
+                    f"Required local model {GENERATION_MODEL} is not installed.",
+                )
             response = self._client.post(
                 "/api/chat",
                 json={
@@ -134,7 +146,7 @@ class OllamaGeneration:
                     "messages": [message.model_dump(mode="json") for message in request.messages],
                     "format": request.response_schema,
                     "stream": False,
-                    "think": True,
+                    "think": False,
                     "keep_alive": "5m",
                     "options": {
                         "temperature": 0,
@@ -148,9 +160,13 @@ class OllamaGeneration:
             response.raise_for_status()
             result = _ChatResponse.model_validate(response.json())
             if result.model != GENERATION_MODEL or result.done_reason in ("length", "max_tokens"):
-                return failure("INVALID_MODEL_OUTPUT", "Qwen returned a wrong model or truncated reply.")
+                return failure(
+                    "INVALID_MODEL_OUTPUT", "Qwen returned a wrong model or truncated reply."
+                )
             if not result.message.content.strip() or len(result.message.content.encode()) > 65536:
-                return failure("INVALID_MODEL_OUTPUT", "Qwen did not return bounded final JSON content.")
+                return failure(
+                    "INVALID_MODEL_OUTPUT", "Qwen did not return bounded final JSON content."
+                )
             try:
                 content = json.loads(
                     result.message.content,
@@ -161,17 +177,23 @@ class OllamaGeneration:
                     raise ValueError("Generation content must be an object.")
                 validator.validate(content)
             except Exception:
-                return failure("INVALID_MODEL_OUTPUT", "Qwen output does not match the response schema.")
+                return failure(
+                    "INVALID_MODEL_OUTPUT", "Qwen output does not match the response schema."
+                )
             if self._model_digest() != digest:
-                return failure("INVALID_MODEL_OUTPUT", "Qwen changed during generation; retry.", retryable=True)
-            return success(GenerationOutput(
-                model=GENERATION_MODEL,
-                model_digest=digest,
-                content=content,
-                prompt_tokens=result.prompt_eval_count,
-                completion_tokens=result.eval_count,
-                duration_ms=result.total_duration // 1_000_000,
-            ))
+                return failure(
+                    "INVALID_MODEL_OUTPUT", "Qwen changed during generation; retry.", retryable=True
+                )
+            return success(
+                GenerationOutput(
+                    model=GENERATION_MODEL,
+                    model_digest=digest,
+                    content=content,
+                    prompt_tokens=result.prompt_eval_count,
+                    completion_tokens=result.eval_count,
+                    duration_ms=result.total_duration // 1_000_000,
+                )
+            )
         except httpx.TimeoutException:
             return failure("MODEL_TIMEOUT", "Local Qwen generation timed out.", retryable=True)
         except httpx.HTTPStatusError as exc:
@@ -179,9 +201,12 @@ class OllamaGeneration:
             if status == 429:
                 return failure("BUSY", "Ollama is busy.", retryable=True)
             if status == 400:
-                return failure("BAD_INPUT", "Ollama rejected the generation request or context settings.")
+                return failure(
+                    "BAD_INPUT", "Ollama rejected the generation request or context settings."
+                )
             return failure(
-                "MODEL_UNAVAILABLE", f"Qwen generation failed with HTTP {status}.",
+                "MODEL_UNAVAILABLE",
+                f"Qwen generation failed with HTTP {status}.",
                 retryable=status >= 500 and status != 501,
             )
         except httpx.RequestError:

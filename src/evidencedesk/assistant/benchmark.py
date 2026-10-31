@@ -37,16 +37,19 @@ def benchmark_qwen(
             }
             if response.ok and response.data is not None:
                 result = response.data
-                sample.update({
-                    "model_digest": result.model_digest,
-                    "server_duration_ms": result.duration_ms,
-                    "prompt_tokens": result.prompt_tokens,
-                    "completion_tokens": result.completion_tokens,
-                    "completion_tokens_per_total_second": (
-                        result.completion_tokens * 1000 / result.duration_ms
-                        if result.duration_ms > 0 else None
-                    ),
-                })
+                sample.update(
+                    {
+                        "model_digest": result.model_digest,
+                        "server_duration_ms": result.duration_ms,
+                        "prompt_tokens": result.prompt_tokens,
+                        "completion_tokens": result.completion_tokens,
+                        "completion_tokens_per_total_second": (
+                            result.completion_tokens * 1000 / result.duration_ms
+                            if result.duration_ms > 0
+                            else None
+                        ),
+                    }
+                )
             samples.append(sample)
     durations = sorted(sample["wall_ms"] for sample in samples if sample["ok"])
     return {

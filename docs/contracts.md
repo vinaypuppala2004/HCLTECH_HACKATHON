@@ -206,17 +206,17 @@ The default API still uses mock tools; this adapter does not enable live search.
 }
 ```
 
-C owns embeddings and generation. Only `qwen3:4b` may be called. The embedding
-adapter reads dimensions from `/api/show` and validates actual `/api/embed`
-responses. Missing `embedding` capability metadata does not block a configured
-runner. Run `python -m evidencedesk.retrieval.embedding_server` on loopback port
-11435 for raw last-token embeddings; keep generation on the regular 11434 service.
-Both use the same Qwen weights. One finite, nonzero vector per input is required,
-matching the model's declared dimensions; the verified Qwen model produces 2560.
-Inputs are unchanged, truncation is disabled, and no Nomic prefixes are added.
-HTTP 501 returns `EMBEDDING_UNAVAILABLE` with setup instructions. The raw profile
-uses CPU, context 1024, batch 64, and a one-minute keepalive; its retrieval quality
-is not yet evaluated. The JSON shapes are unchanged. See `docs/embeddings.md`.
+C owns the model ports. Generation uses `qwen3:4b`; embeddings use
+`nomic-embed-text:v1.5` on the normal Ollama service at port 11434. The native
+adapter adds `search_query:` or `search_document:` prefixes and validates the
+model, digest, vector count, finite values, and declared dimensions. It produces
+768-dimensional vectors. `CompactEmbeddings` applies the Nomic MRL transform
+(layer normalization, leading dimensions, L2 normalization) to produce 512
+dimensions by default. Stored profile metadata prevents mixing incompatible
+dimensions or transforms. Model digest changes require a new/rebuilt index.
+Truncation is disabled, and no alternative embedding model is selected on failure.
+The JSON shapes are unchanged; `EmbeddingOutput.dimensions` reports the actual
+output size. See `docs/embeddings.md` for indexing and the handoff to D.
 Generation content must match the supplied JSON Schema. Future model adapters
 share a request limiter. Never silently substitute a different model or mock.
 
@@ -294,7 +294,7 @@ Concrete mock health response (request ID varies):
   "ok":true,"request_id":"req_example",
   "data":{
     "mode":"mock","ready":true,"ollama_available":false,
-    "generation_model":"qwen3:4b","embedding_model":"qwen3:4b",
+    "generation_model":"qwen3:4b","embedding_model":"nomic-embed-text:v1.5",
     "index_revision":1,"document_count":1
   },
   "error":null
@@ -304,4 +304,18 @@ Concrete mock health response (request ID varies):
 Use `/docs` to execute requests and inspect full nested responses. UI history is
 display-only; v1 sends the latest question and explicit scope, not chat history.
 The health example assumes `.env` uses the updated `.env.example` model values.
-D must align the legacy model defaults in `core/settings.py` with this policy.
+The existing default model names in `core/settings.py` already match this split.
+
+## Internal C1 indexing interface
+
+`QdrantIndex(path, CompactEmbeddings(native_embedder, dimensions=512))` owns one
+local client. D constructs it once in the backend and closes it at shutdown;
+UI processes must not open the same path. B supplies validated `Document` and
+`Passage` records to `index_document(document, passages)`, which returns
+`Envelope[IngestResult]` for one document using the existing JSON shapes.
+
+`search(QueryInput)` returns `Envelope[SearchResult]` with at most six scoped
+semantic hits. Product/environment matching is case-insensitive; version matching
+is exact. BM25 scores are null and RRF scores are zero until C2 fusion is added.
+`read_sources(SourcesInput)` returns the existing source envelope. These methods
+are opt-in; the default mock API factory has not been changed.

@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from evidencedesk.contracts.models import EmbeddingInput, EmbeddingOutput, Envelope
 from evidencedesk.core.responses import failure, success
 
-EMBEDDING_MODEL = "qwen3:4b"
+EMBEDDING_MODEL = "nomic-embed-text:v1.5"
 _DEFAULT_REQUEST_LOCK = Lock()
 
 
@@ -40,7 +40,7 @@ class _ModelDetails(BaseModel):
 
 
 class OllamaEmbeddings:
-    """Use only qwen3:4b against a configured embedding-mode Ollama runner.
+    """Produce native Nomic vectors using a caller-owned Ollama client.
 
     The client supplies the Ollama base URL and timeout. Pass the same request_lock
     to future generation adapters to share the single-model request limit.
@@ -65,8 +65,6 @@ class OllamaEmbeddings:
             response = self._client.post("/api/show", json={"model": EMBEDDING_MODEL})
             response.raise_for_status()
             details = _ModelDetails.model_validate(response.json())
-            # /api/show describes the model file, not runtime flags. A separate
-            # runner can enable raw Qwen embeddings without changing this list.
             architecture = details.model_info.get("general.architecture")
             dimensions = details.model_info.get(f"{architecture}.embedding_length")
             if type(dimensions) is not int or dimensions < 1:
@@ -75,10 +73,13 @@ class OllamaEmbeddings:
                 "/api/embed",
                 json={
                     "model": EMBEDDING_MODEL,
-                    "input": request.texts,
+                    "input": [
+                        ("search_query: " if request.kind == "query" else "search_document: ")
+                        + text
+                        for text in request.texts
+                    ],
                     "truncate": False,
-                    "keep_alive": "1m",
-                    "options": {"num_ctx": 1024, "num_batch": 64, "num_gpu": 0},
+                    "keep_alive": "5m",
                 },
             )
             response.raise_for_status()
@@ -121,9 +122,8 @@ class OllamaEmbeddings:
             if status == 501:
                 return failure(
                     "EMBEDDING_UNAVAILABLE",
-                    "The Qwen runner is not in embedding mode. Start "
-                    "python -m evidencedesk.retrieval.embedding_server and use "
-                    "http://127.0.0.1:11435 for the embedding client.",
+                    "Ollama cannot produce embeddings with the required Nomic model. "
+                    "Check the installed model and Ollama server.",
                 )
             return failure(
                 "EMBEDDING_UNAVAILABLE",

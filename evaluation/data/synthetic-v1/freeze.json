@@ -1,0 +1,25 @@
+{
+  "dataset_id": "synthetic-v1",
+  "origin": "synthetic",
+  "frozen_on": "2026-10-31",
+  "heldout_case_ids": [
+    "held_01",
+    "held_02",
+    "held_03",
+    "held_04",
+    "held_05",
+    "held_06",
+    "held_07",
+    "held_08"
+  ],
+  "heldout_family_ids": [
+    "attachment_size",
+    "audit_deletion",
+    "invoice_signing",
+    "service_token_rotation",
+    "session_timeout",
+    "sharing_link_expiry"
+  ],
+  "heldout_sha256": "22be0b6a496cf5c6197687c3e2cd55d9a9644c3c97dda0c4145a3679bae88701",
+  "sources_sha256": "265e4a75875e20e16cef2590f433ebf05f5309709bbe6582f29a1e305a8c54d2"
+}

@@ -118,7 +118,7 @@ Progress: `progress/member-c.md`.
 - [x] One smoke test covers API/tool wiring, chat submission, and rerun behavior.
 - [x] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
 - [x] D2: Wire B/C tools through shared ports; manage startup and request concurrency.
-- [ ] D3: Label 24 questions; freeze 8 held-out cases before tuning.
+- [x] D3: Label 25 questions from the supplied real corpus; freeze 8 held-out cases before tuning.
 - [ ] D4: Integrate Ragas with explicitly local model and embedding providers.
 - [ ] D5: Measure retrieval, faithfulness, citations, fallback, and latency.
 - [ ] D6: Review grading; produce the report and five evidence-backed examples.

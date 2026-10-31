@@ -1,0 +1,559 @@
+[
+  {
+    "case_id": "dev_01",
+    "family_id": "password_reset",
+    "category": "direct",
+    "query": {
+      "question": "How do I reset my password in AtlasDesk 1.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, reset your password from Account > Security > Reset password.",
+          "supports": [
+            {
+              "passage_id": "eval_reset_v1",
+              "quote": "In AtlasDesk 1.0 production, reset your password from Account > Security > Reset password."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_reset_v1"
+    ],
+    "rationale": "The scoped source states the answer explicitly; cite its exact excerpt."
+  },
+  {
+    "case_id": "dev_02",
+    "family_id": "account_unlock",
+    "category": "direct",
+    "query": {
+      "question": "Who can unlock a suspended AtlasDesk 1.0 production account?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, ask a workspace administrator to unlock a suspended account.",
+          "supports": [
+            {
+              "passage_id": "eval_unlock_v1",
+              "quote": "In AtlasDesk 1.0 production, ask a workspace administrator to unlock a suspended account."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_unlock_v1"
+    ],
+    "rationale": "The scoped source states the answer explicitly; cite its exact excerpt."
+  },
+  {
+    "case_id": "dev_03",
+    "family_id": "csv_export",
+    "category": "direct",
+    "query": {
+      "question": "Where do I export a project as CSV in AtlasDesk 1.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, export a project as CSV from Project > Export > CSV.",
+          "supports": [
+            {
+              "passage_id": "eval_csv_v1",
+              "quote": "In AtlasDesk 1.0 production, export a project as CSV from Project > Export > CSV."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_csv_v1"
+    ],
+    "rationale": "The scoped source states the answer explicitly; cite its exact excerpt."
+  },
+  {
+    "case_id": "dev_04",
+    "family_id": "incident_retention",
+    "category": "direct",
+    "query": {
+      "question": "How many days of incident history does AtlasDesk 1.0 production keep?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 1.0 production keeps incident history for 14 days.",
+          "supports": [
+            {
+              "passage_id": "eval_retention_v1",
+              "quote": "AtlasDesk 1.0 production keeps incident history for 14 days."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_retention_v1"
+    ],
+    "rationale": "The scoped source states the answer explicitly; cite its exact excerpt."
+  },
+  {
+    "case_id": "dev_05",
+    "family_id": "diagnostic_logs",
+    "category": "direct",
+    "query": {
+      "question": "Where can I download diagnostic logs in AtlasDesk 1.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, download diagnostics from Help > Diagnostics > Download logs.",
+          "supports": [
+            {
+              "passage_id": "eval_logs_v1",
+              "quote": "In AtlasDesk 1.0 production, download diagnostics from Help > Diagnostics > Download logs."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_logs_v1"
+    ],
+    "rationale": "The scoped source states the answer explicitly; cite its exact excerpt."
+  },
+  {
+    "case_id": "dev_06",
+    "family_id": "api_key_lifetime",
+    "category": "direct",
+    "query": {
+      "question": "When do AtlasDesk 1.0 production API keys expire?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 1.0 production API keys expire after 30 days.",
+          "supports": [
+            {
+              "passage_id": "eval_key_expiry_v1",
+              "quote": "AtlasDesk 1.0 production API keys expire after 30 days."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_key_expiry_v1"
+    ],
+    "rationale": "The scoped source states the answer explicitly; cite its exact excerpt."
+  },
+  {
+    "case_id": "dev_07",
+    "family_id": "password_reset",
+    "category": "paraphrase",
+    "query": {
+      "question": "I forgot my AtlasDesk 1.0 production password. Which menu lets me choose another one?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, reset your password from Account > Security > Reset password.",
+          "supports": [
+            {
+              "passage_id": "eval_reset_v1",
+              "quote": "In AtlasDesk 1.0 production, reset your password from Account > Security > Reset password."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_reset_v1"
+    ],
+    "rationale": "Paraphrase of a development-only topic; same scoped evidence and answer as its direct case."
+  },
+  {
+    "case_id": "dev_08",
+    "family_id": "account_unlock",
+    "category": "paraphrase",
+    "query": {
+      "question": "My AtlasDesk 1.0 production account is suspended. Whose help do I need to regain access?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, ask a workspace administrator to unlock a suspended account.",
+          "supports": [
+            {
+              "passage_id": "eval_unlock_v1",
+              "quote": "In AtlasDesk 1.0 production, ask a workspace administrator to unlock a suspended account."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_unlock_v1"
+    ],
+    "rationale": "Paraphrase of a development-only topic; same scoped evidence and answer as its direct case."
+  },
+  {
+    "case_id": "dev_09",
+    "family_id": "csv_export",
+    "category": "paraphrase",
+    "query": {
+      "question": "I need a spreadsheet copy of my AtlasDesk 1.0 production project. How can I obtain a CSV?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "In AtlasDesk 1.0 production, export a project as CSV from Project > Export > CSV.",
+          "supports": [
+            {
+              "passage_id": "eval_csv_v1",
+              "quote": "In AtlasDesk 1.0 production, export a project as CSV from Project > Export > CSV."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_csv_v1"
+    ],
+    "rationale": "Paraphrase of a development-only topic; same scoped evidence and answer as its direct case."
+  },
+  {
+    "case_id": "dev_10",
+    "family_id": "incident_retention",
+    "category": "paraphrase",
+    "query": {
+      "question": "How far back can I look at incidents in AtlasDesk 1.0 production?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 1.0 production keeps incident history for 14 days.",
+          "supports": [
+            {
+              "passage_id": "eval_retention_v1",
+              "quote": "AtlasDesk 1.0 production keeps incident history for 14 days."
+            }
+          ]
+        }
+      ],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_retention_v1"
+    ],
+    "rationale": "Paraphrase of a development-only topic; same scoped evidence and answer as its direct case."
+  },
+  {
+    "case_id": "dev_11",
+    "family_id": "incident_retention",
+    "category": "conflict_version",
+    "query": {
+      "question": "For AtlasDesk 2.0 production, how long is incident history retained, and what changed from 1.0?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "2.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "answered",
+      "claims": [
+        {
+          "claim_id": "gold_claim_1",
+          "text": "AtlasDesk 2.0 production keeps incident history for 30 days.",
+          "supports": [
+            {
+              "passage_id": "eval_retention_v2",
+              "quote": "AtlasDesk 2.0 production keeps incident history for 30 days."
+            }
+          ]
+        }
+      ],
+      "conflicts": [
+        {
+          "conflict_id": "gold_conflict_1",
+          "kind": "version_difference",
+          "topic": "Incident history retention",
+          "sides": [
+            {
+              "passage_id": "eval_retention_v1",
+              "quote": "AtlasDesk 1.0 production keeps incident history for 14 days."
+            },
+            {
+              "passage_id": "eval_retention_v2",
+              "quote": "AtlasDesk 2.0 production keeps incident history for 30 days."
+            }
+          ],
+          "resolution": "resolved_by_context",
+          "selected_passage_ids": [
+            "eval_retention_v2"
+          ]
+        }
+      ],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_retention_v1",
+      "eval_retention_v2"
+    ],
+    "rationale": "Version 2.0 selects 30 days; expose the 1.0 counterpart's 14 days as a resolved version difference."
+  },
+  {
+    "case_id": "dev_12",
+    "family_id": "maintenance_window",
+    "category": "conflict_version",
+    "query": {
+      "question": "What time does the AtlasDesk 1.0 production maintenance window start on Sundays?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "conflict",
+      "claims": [],
+      "conflicts": [
+        {
+          "conflict_id": "gold_conflict_1",
+          "kind": "contradiction",
+          "topic": "Sunday maintenance start",
+          "sides": [
+            {
+              "passage_id": "eval_maintenance_policy",
+              "quote": "The AtlasDesk 1.0 production maintenance window starts at 02:00 UTC on Sundays."
+            },
+            {
+              "passage_id": "eval_maintenance_memo",
+              "quote": "The AtlasDesk 1.0 production maintenance window starts at 03:00 UTC on Sundays."
+            }
+          ],
+          "resolution": "unresolved",
+          "selected_passage_ids": []
+        }
+      ],
+      "clarification": null,
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_maintenance_policy",
+      "eval_maintenance_memo"
+    ],
+    "rationale": "Two sources in the same scope specify different times. No precedence metadata exists; expose both and leave the contradiction unresolved."
+  },
+  {
+    "case_id": "dev_13",
+    "family_id": "incident_retention",
+    "category": "ambiguous",
+    "query": {
+      "question": "How long does AtlasDesk production retain incident history?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": null,
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "needs_context",
+      "claims": [],
+      "conflicts": [],
+      "clarification": {
+        "field": "version",
+        "question": "Which AtlasDesk version are you using?",
+        "options": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_retention_v1",
+      "eval_retention_v2"
+    ],
+    "rationale": "Version is missing and changes retention; ask for it before asserting a factual answer."
+  },
+  {
+    "case_id": "dev_14",
+    "family_id": "backup_restore",
+    "category": "ambiguous",
+    "query": {
+      "question": "How do I restore an AtlasDesk 1.0 backup?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": null
+      }
+    },
+    "expected": {
+      "status": "needs_context",
+      "claims": [],
+      "conflicts": [],
+      "clarification": {
+        "field": "environment",
+        "question": "Is this production or sandbox?",
+        "options": [
+          "production",
+          "sandbox"
+        ]
+      },
+      "fallback_reason": null
+    },
+    "relevant_passage_ids": [
+      "eval_restore_production",
+      "eval_restore_sandbox"
+    ],
+    "rationale": "Environment is missing and changes the restoration procedure; do not select a procedure yet."
+  },
+  {
+    "case_id": "dev_15",
+    "family_id": "subscription_pricing",
+    "category": "unsupported",
+    "query": {
+      "question": "How much does an AtlasDesk 1.0 production subscription cost?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "not_found",
+      "claims": [],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": "no_support"
+    },
+    "relevant_passage_ids": [],
+    "rationale": "No passage in the complete frozen synthetic source set specifies subscription pricing. Decline without inventing a price or citation."
+  },
+  {
+    "case_id": "dev_16",
+    "family_id": "calendar_sync",
+    "category": "unsupported",
+    "query": {
+      "question": "How do I sync an AtlasDesk 1.0 production project with a calendar?",
+      "context": {
+        "product": "AtlasDesk",
+        "version": "1.0",
+        "environment": "production"
+      }
+    },
+    "expected": {
+      "status": "not_found",
+      "claims": [],
+      "conflicts": [],
+      "clarification": null,
+      "fallback_reason": "no_support"
+    },
+    "relevant_passage_ids": [],
+    "rationale": "The source set documents CSV export but contains no calendar integration instructions. Export evidence does not support calendar sync."
+  }
+]

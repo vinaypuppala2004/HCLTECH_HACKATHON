@@ -96,6 +96,8 @@ Progress: `progress/member-a.md`.
 - [x] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
 - [x] B3: Segment passages with headings, overlap, and stable source IDs.
 - [ ] B4: Report empty/corrupt inputs; send passages to C's indexing port.
+  - [x] Add opt-in upload validation, strict base64/limits, and per-file errors.
+  - [ ] Connect C's agreed indexing port and verify actual committed results.
 - [ ] B5: Verify formats and deduplication; share source IDs with D for labels.
 
 Person B phases map directly to B1–B5 above. Phase 2 parsing is complete and
@@ -103,8 +105,12 @@ preserves PDF pages, HTML/Markdown headings, and source line ranges. Phase 3 add
 exact source slices with configurable character limits and overlap (defaults:
 1,200/200), deterministic document/passage IDs, and internal location records.
 Chunks never cross source blocks or pages. Output uses the existing contracts;
-public ingestion and source tools remain mocked. Phase 1 source curation is
-still pending; API/indexing integration and deduplication remain in phases 4–5.
+default ingestion and source tools remain mocked. Phase 4's opt-in validator
+prepares files in memory and reports per-file errors using the existing envelope;
+valid files remain rejected/NOT_IMPLEMENTED until indexing is connected. At the
+user's direction, C's undefined indexing handoff stays pending and B4 is not
+complete. Phase 1 source curation and phase 5 deduplication/label handoff are also
+pending. Study checklists for phases 2–3 live in the owned ingestion folder.
 
 Acceptance: citation locations survive chunking; failed files never appear indexed.
 Progress: `progress/member-b.md`.

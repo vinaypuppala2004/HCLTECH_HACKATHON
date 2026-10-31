@@ -108,6 +108,7 @@ Progress: `progress/member-b.md`.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
 - [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
 - [ ] C4: Add verification/fallback and index B's passages; expose tools to D.
+  - [x] Reject inapplicable or invalid claim citations; verify API fallback with mocks.
 - [ ] C5: Verify restart, share ranking results, and coordinate integration with D.
 
 Acceptance: retrieval respects scope and persists; answers cite evidence and fail clearly.

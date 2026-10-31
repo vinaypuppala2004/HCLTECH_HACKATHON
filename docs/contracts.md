@@ -161,9 +161,13 @@ claim, or returns `not_found` for no hits. No Ollama, conflicts, or clarificatio
 }
 ```
 
-`VerifyInput` → `Envelope[Verification]`. Stub checks only claim quotation IDs and
-nonempty exact substrings. Success is labelled `limited`. It does not evaluate
-semantic support or conflicts. Empty claims produce `passed=false` and no checks.
+`VerifyInput` → `Envelope[Verification]`. Deterministic checks require every claim
+citation to identify a retrieved passage with a nonblank exact quote and
+`applicable=true`. An exact quote from an inapplicable hit retains
+`quote_valid=true`, but its claim verdict is `unsupported` and verification fails.
+All claim checks must be supported for verification to pass. Success is labelled
+`limited`; semantic support and conflicts are not evaluated. Empty claims produce
+`passed=false` and no checks.
 
 ## Tool 5: read_sources — B
 

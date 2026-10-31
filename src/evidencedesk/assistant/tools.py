@@ -43,25 +43,36 @@ def draft_answer(request: DraftInput) -> Envelope[Draft]:
 
 
 def verify_answer(request: VerifyInput) -> Envelope[Verification]:
-    passages = {hit.passage.passage_id: hit.passage.text for hit in request.retrieval.hits}
+    hits = {hit.passage.passage_id: hit for hit in request.retrieval.hits}
     checks = []
     for claim in request.draft.claims:
-        valid = all(
-            support.passage_id in passages
-            and bool(support.quote)
-            and support.quote in passages[support.passage_id]
+        quote_valid = all(
+            support.passage_id in hits
+            and bool(support.quote.strip())
+            and support.quote in hits[support.passage_id].passage.text
             for support in claim.supports
         )
+        applicable = quote_valid and all(
+            hits[support.passage_id].applicable for support in claim.supports
+        )
+        if not quote_valid:
+            reason = (
+                "Citation must identify a retrieved passage and contain a nonblank exact quote."
+            )
+        elif not applicable:
+            reason = "Cited evidence is not applicable to the selected context."
+        else:
+            reason = "Quote and applicability checks only; semantic support is not evaluated."
         checks.append(
             Check(
                 target_type="claim",
                 target_id=claim.claim_id,
-                quote_valid=valid,
-                verdict="supported" if valid else "unsupported",
-                reason="Mock quote check only; semantic support is not evaluated.",
+                quote_valid=quote_valid,
+                verdict="supported" if applicable else "unsupported",
+                reason=reason,
             )
         )
-    passed = bool(checks) and all(check.quote_valid for check in checks)
+    passed = bool(checks) and all(check.verdict == "supported" for check in checks)
     return success(
         Verification(
             passed=passed,

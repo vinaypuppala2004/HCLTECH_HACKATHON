@@ -71,3 +71,9 @@ $env:QDRANT_PATH = (Resolve-Path -LiteralPath .worktrees/live-completion/var/qdr
 
 Run only one backend per index path. See the [live runbook](docs/live-runbook.md)
 for details. On macOS/Linux, use `.venv/bin/python` and the same `.env` settings.
+
+## Project Members
+1) Vinay Puppala
+2) Anurag Gupta
+3) Koushik Sharma
+4) Shivam bhosle

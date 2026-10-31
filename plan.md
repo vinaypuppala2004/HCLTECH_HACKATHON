@@ -8,8 +8,10 @@ conflicting versions, and asks for missing context or declines when support is
 insufficient. The centerpiece is side-by-side evidence and explicit version selection.
 
 Architecture: Streamlit → FastAPI → retrieval → draft → verification → cited reply.
-Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → local embeddings
-→ Qdrant. Combine BM25 and semantic retrieval through reciprocal rank fusion.
+Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → BM25 and
+semantic retrieval. Use only `qwen3:4b` for model calls. An isolated embedding-mode
+runner now produces raw Qwen vectors; Qdrant indexing and retrieval evaluation
+remain pending. Combine ranked results through reciprocal rank fusion.
 
 ### Tech stack
 | Component | Choice | Skeleton status |
@@ -17,9 +19,9 @@ Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → local em
 | Interface | Streamlit | HTTP-backed mock chat |
 | Backend | Python / FastAPI / Pydantic | Typed routes and tool wiring |
 | Generation | Ollama `qwen3:4b` | Planned; no inference |
-| Embeddings | Ollama `nomic-embed-text:v1.5` | Planned; no model calls |
+| Embeddings | `qwen3:4b`, raw last-token pooling | Live adapter verified; API still mock |
 | Vector storage | Qdrant local persistent directory | Planned; no database |
-| Retrieval | BM25 + semantic search | One fixed fixture |
+| Retrieval | BM25 first; semantic search pending | One fixed fixture |
 | Evaluation | Ragas with local Ollama and labelled checks | Planned; no scores |
 
 ### Team and ownership
@@ -58,7 +60,7 @@ silently substitute mocks. Cut polish before citations, conflicts, or evaluation
 | Local FastAPI + Streamlit | Agreed stack; no public deployment |
 | Python 3.13 and a pinned dependency lock | Match the verified setup across teammates |
 | `qwen3:4b` generation | User-selected; benchmark on the 4 GB GPU |
-| Separate local embedding model | Generation and embeddings have different roles |
+| Only `qwen3:4b` for model calls | User instruction; no alternative embedding model |
 | Qdrant local directory | User-selected persistence; backend owns the client |
 | Ragas outside interactive requests | User-selected evaluation without chat latency |
 | Mock-only first skeleton | Parallel work without external services/downloads |
@@ -119,10 +121,12 @@ Progress: `progress/member-b.md`.
 - [x] Shared contracts, ports, and mock fixtures exist.
 - [x] Retrieval, drafting, and verification stubs exist.
 - [ ] C1: Add local embeddings and backend-owned Qdrant persistence.
-  - [x] Add opt-in Ollama embedding adapter with task prefixes, validation, and model identity.
-  - [x] Verify successful local embeddings for synthetic passages and a question.
+  - [x] Enforce `qwen3:4b` only; validate real endpoint output and report runner setup errors.
+  - [x] Verify 2560-dimensional Qwen vectors using a separate embedding-only runner.
+  - [ ] Evaluate retrieval quality of the raw last-token profile with D.
   - [ ] Persist passage vectors in Qdrant and verify restart.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
+  - [ ] Start with BM25 lexical retrieval under the single-model policy.
 - [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
 - [ ] C4: Add verification/fallback and index B's passages; expose tools to D.
   - [x] Reject inapplicable or invalid claim citations; verify API fallback with mocks.

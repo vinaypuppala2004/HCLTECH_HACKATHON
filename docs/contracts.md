@@ -206,8 +206,17 @@ The default API still uses mock tools; this adapter does not enable live search.
 }
 ```
 
-C owns embeddings and generation. Target embeddings have 768 dimensions and
-one vector per input in order, using `search_query:` / `search_document:` prefixes.
+C owns embeddings and generation. Only `qwen3:4b` may be called. The embedding
+adapter reads dimensions from `/api/show` and validates actual `/api/embed`
+responses. Missing `embedding` capability metadata does not block a configured
+runner. Run `python -m evidencedesk.retrieval.embedding_server` on loopback port
+11435 for raw last-token embeddings; keep generation on the regular 11434 service.
+Both use the same Qwen weights. One finite, nonzero vector per input is required,
+matching the model's declared dimensions; the verified Qwen model produces 2560.
+Inputs are unchanged, truncation is disabled, and no Nomic prefixes are added.
+HTTP 501 returns `EMBEDDING_UNAVAILABLE` with setup instructions. The raw profile
+uses CPU, context 1024, batch 64, and a one-minute keepalive; its retrieval quality
+is not yet evaluated. The JSON shapes are unchanged. See `docs/embeddings.md`.
 Generation content must match the supplied JSON Schema. Future model adapters
 share a request limiter. Never silently substitute a different model or mock.
 
@@ -285,7 +294,7 @@ Concrete mock health response (request ID varies):
   "ok":true,"request_id":"req_example",
   "data":{
     "mode":"mock","ready":true,"ollama_available":false,
-    "generation_model":"qwen3:4b","embedding_model":"nomic-embed-text:v1.5",
+    "generation_model":"qwen3:4b","embedding_model":"qwen3:4b",
     "index_revision":1,"document_count":1
   },
   "error":null
@@ -294,3 +303,5 @@ Concrete mock health response (request ID varies):
 
 Use `/docs` to execute requests and inspect full nested responses. UI history is
 display-only; v1 sends the latest question and explicit scope, not chat history.
+The health example assumes `.env` uses the updated `.env.example` model values.
+D must align the legacy model defaults in `core/settings.py` with this policy.

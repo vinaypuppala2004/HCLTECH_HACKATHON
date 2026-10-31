@@ -1,105 +1,98 @@
-# Local embedding adapter — Person C
+# Qwen embeddings: runner setup and verification
 
-`retrieval.embeddings.OllamaEmbeddings` implements the existing `EmbeddingPort`.
-It is opt-in: the default API and search still use explicitly labelled mocks.
-No JSON contract, dependency pin, or Person D file changes are needed.
+Only **`qwen3:4b`** is used. The adapter does not download, substitute, or call
+another model. Raw Qwen embeddings now work through an isolated local Ollama
+process, while the regular Ollama process continues to handle generation.
 
-## What this step does
+## Why the earlier request failed
 
-An embedding is a numeric representation of text. Later, semantic search will
-compare a question's vector with passage vectors saved in Qdrant. This step
-implements the text-to-vector boundary; persistence and ranking are separate tasks.
+The installed Ollama 0.40.13 starts this model's default runner in generation
+mode because its GGUF metadata has no pooling setting. `/api/embed` on that
+runner returned HTTP 501 asking for embedding mode. The adapter also rejected
+the model too early based on its `/api/show` capability list.
 
-For this project the model is fixed to `nomic-embed-text:v1.5` and the vector length
-is 768. Input order is preserved, so vector 0 belongs to text 0. Queries receive
-`search_query: ` and passages receive `search_document: ` before being sent to
-Ollama. The original passage text remains unchanged for citations.
+The fix starts another process with `LLAMA_ARG_EMBEDDINGS=1` and
+`LLAMA_ARG_POOLING=last`. These are process-scoped settings: the existing chat
+server and its configuration are not modified. Capability metadata still lists
+`completion`, `tools`, and `thinking`, so the adapter now validates actual endpoint
+output instead of treating a missing `embedding` label as conclusive.
 
-The adapter reads `/api/tags` for the required model and its digest, then posts the
-prefixed batch to `/api/embed` with `truncate=false`. A digest identifies the
-installed model contents. Checking it before and after embedding detects a model
-tag change during the operation; changed results are discarded. Future indexing
-must also ensure that stored document vectors and query vectors use the same
-model digest and dimensions.
+Sources: [Ollama 0.40.13 runner startup and inherited environment](https://github.com/ollama/ollama/blob/v0.40.13/llm/llama_server.go),
+[llama.cpp embedding and pooling settings](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
 
-Responses must contain one finite, nonzero, 768-dimensional vector per input.
-Malformed JSON, a different model, numeric strings, booleans, missing vectors,
-zero vectors, and nonfinite numbers are rejected. The adapter returns the frozen
-success/error envelope and never substitutes random or mock embeddings.
+## Start the embedding process
 
-## Handoff to Person D
+Keep your regular Ollama service running. From the Person C worktree, start a
+second terminal with:
 
-Person D owns client startup/shutdown, settings, API wiring, and readiness. Create
-one HTTP client with an explicit timeout and inject a shared model lock:
+```powershell
+.\.venv\Scripts\python.exe -m evidencedesk.retrieval.embedding_server
+```
+
+On Linux/macOS use `.venv/bin/python`. If Ollama is not found, supply
+`--ollama` with the installed executable's path. `--port` can select another
+unprivileged loopback port except the standard chat port 11434.
+
+| Purpose | URL | Model |
+|---|---|---|
+| Generation | `http://127.0.0.1:11434` | `qwen3:4b` |
+| Raw embeddings | `http://127.0.0.1:11435` | `qwen3:4b` |
+
+The launcher uses existing model storage, binds only loopback, refuses an occupied
+port, and downloads no weights. Stop a foreground launcher with Ctrl+C. The adapter
+uses CPU for embeddings to avoid consuming the generation model's GPU allocation.
+It requests context 1024, batch 64, `truncate=false`, and one-minute keepalive.
+Oversized passages must be split; they are not silently shortened.
+
+## Use the adapter
 
 ```python
-from threading import Lock
-
 import httpx
 
 from evidencedesk.contracts.models import EmbeddingInput
 from evidencedesk.retrieval.embeddings import OllamaEmbeddings
 
-model_lock = Lock()  # Reuse this lock for the future generation adapter.
-with httpx.Client(base_url="http://127.0.0.1:11434", timeout=180, trust_env=False) as client:
-    embed = OllamaEmbeddings(client, request_lock=model_lock)
-    response = embed(EmbeddingInput(texts=["How do I reset my password?"], kind="query"))
+with httpx.Client(base_url="http://127.0.0.1:11435", timeout=180, trust_env=False) as client:
+    embed = OllamaEmbeddings(client)
+    response = embed(EmbeddingInput(texts=["Reset my password"], kind="query"))
     if response.ok:
-        vectors = response.data.vectors
-    else:
-        error = response.error
+        assert response.data.model == "qwen3:4b"
+        assert response.data.dimensions == 2560
+        vector = response.data.vectors[0]
 ```
 
-The caller owns the HTTP client; the adapter does not close it. With no explicit
-lock, embedding adapter instances share a module-level lock. A busy lock returns
-`BUSY` without waiting or calling Ollama. The lock is released on success and on
-every error path. Passing the same lock to generation will allow at most one
-model operation at a time.
+Queries and documents use unchanged text and the same pooling profile. The adapter
+requires finite, nonzero vectors with the model's declared dimensions, one per
+input in order. It checks the model name and digest, rejects digest changes during
+a call, and retains explicit errors and shared request locking. An unconfigured
+runner's HTTP 501 now includes the launcher command and embedding URL.
 
-| Condition | Error code | Retryable |
-|---|---|---|
-| Empty batch or blank text | `BAD_INPUT` | No |
-| Required model missing | `EMBEDDING_UNAVAILABLE` | No; install the model first |
-| Connection failure | `EMBEDDING_UNAVAILABLE` | Yes |
-| HTTP 400, including oversized input | `BAD_INPUT` | No; fix or split the input |
-| Lock occupied or HTTP 429 | `BUSY` | Yes |
-| Timeout | `MODEL_TIMEOUT` | Yes |
-| HTTP 5xx | `EMBEDDING_UNAVAILABLE` | Yes |
-| Other HTTP errors | `EMBEDDING_UNAVAILABLE` | No |
-| Malformed response or invalid vectors | `INVALID_MODEL_OUTPUT` | No |
-| Model digest changes during the request | `INVALID_MODEL_OUTPUT` | Yes |
+## Real verification on 2026-10-31
 
-The required model must already be installed. An operator can install it with
-`ollama pull nomic-embed-text:v1.5`. The adapter never downloads models itself.
+The project launcher plus adapter returned two synthetic passage vectors and one
+query vector, all **2560-dimensional**, using model digest:
 
-## Verification and current limits
+`359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7`
 
-`tests/retrieval/test_embeddings.py` uses `httpx.MockTransport`: requests stay in
-process and responses contain synthetic vectors. These tests verify prefixes,
-ordering, model identity, validation, errors, and lock behavior; they do not
-measure embedding quality or live inference latency.
+The regular service reported the same digest and completed a real generation
+request with HTTP 200 afterward. A direct embedding probe also returned finite
+vectors with norms approximately 1. These checks establish actual vector output
+and generation compatibility; they do not establish retrieval accuracy.
 
-A local check on 2026-10-31 first verified `EMBEDDING_UNAVAILABLE` while the
-embedding model was absent, then installed `nomic-embed-text:v1.5` in Ollama storage.
-The first request hit a 60-second timeout; Ollama's log reported about 48 seconds
-of initial model startup. A subsequent check with a 180-second client timeout
-succeeded. D should account for model warmup in readiness and choose the API
-timeout policy. The adapter itself does not change the caller's timeout.
+## Limits and handoff to D
 
-The successful check produced two passage vectors and one question vector, all
-768-dimensional, with model digest
-`0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f`.
-For the question "How can I reset my password?", the synthetic example passages
-gave these illustrative cosine similarities:
+Last-token pooling takes a vector from the generation model's internal states.
+This is an **experimental raw representation**, and the upstream embedding-mode
+documentation targets dedicated embedding models. D must evaluate retrieval
+quality before treating these vectors as a validated semantic-search solution.
+Prior Nomic vectors cannot be reused: their model, dimensions, and profile differ.
+Future index metadata must preserve the Qwen digest, pooling profile, and dimensions.
 
-| Synthetic passage | Cosine similarity |
-|---|---|
-| Use the account portal to reset your password. | 0.848697 |
-| Packages are shipped by courier within five business days. | 0.365934 |
+`.env.example` defines `EMBEDDING_OLLAMA_BASE_URL=http://127.0.0.1:11435`.
+D must wire that client separately from `OLLAMA_BASE_URL`, retain startup/readiness
+checks, and pass the same request lock to generation and embedding adapters.
+D also owns the remaining legacy model defaults in `core/settings.py`; C has not
+edited those files. No existing `.env` was overwritten.
 
-This is a live adapter demonstration, not a retrieval evaluation or accuracy score.
-Qdrant storage, hybrid retrieval, and FastAPI integration remain pending.
-
-References: [Ollama embedding API](https://docs.ollama.com/api/embed),
-[Ollama model inventory](https://docs.ollama.com/api/tags),
-[Nomic model instructions](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5).
+The default API still uses labelled mock tools. Qdrant persistence, live retrieval,
+grounded generation integration, and evaluation remain pending.

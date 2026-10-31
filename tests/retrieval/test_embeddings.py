@@ -8,20 +8,28 @@ import pytest
 
 from evidencedesk.contracts.models import EmbeddingInput
 from evidencedesk.retrieval.embeddings import (
-    EMBEDDING_DIMENSIONS,
     EMBEDDING_MODEL,
     OllamaEmbeddings,
 )
 
 DIGEST = "a" * 64
+# Synthetic HTTP fixtures use small vectors; live Qwen returns 2560 dimensions.
+DIMENSIONS = 8
 
 
 def vector(value=0.25):
-    return [value] * EMBEDDING_DIMENSIONS
+    return [value] * DIMENSIONS
 
 
 def model_tags(digest=DIGEST):
     return {"models": [{"name": EMBEDDING_MODEL, "digest": digest}]}
+
+
+def model_details():
+    return {
+        "capabilities": ["embedding"],
+        "model_info": {"general.architecture": "qwen3", "qwen3.embedding_length": DIMENSIONS},
+    }
 
 
 @pytest.fixture
@@ -33,6 +41,8 @@ def call_adapter(request_data, embed_response, *, tags=None):
     def handler(request):
         if request.url.path == "/api/tags":
             return httpx.Response(200, json=model_tags() if tags is None else tags)
+        if request.url.path == "/api/show":
+            return httpx.Response(200, json=model_details())
         return embed_response
 
     with httpx.Client(
@@ -41,10 +51,8 @@ def call_adapter(request_data, embed_response, *, tags=None):
         return OllamaEmbeddings(client)(request_data)
 
 
-@pytest.mark.parametrize(
-    ("kind", "prefix"), [("query", "search_query: "), ("document", "search_document: ")]
-)
-def test_embeds_in_order_with_task_prefix_and_model_identity(request_data, kind, prefix):
+@pytest.mark.parametrize("kind", ["query", "document"])
+def test_capable_server_preserves_input_order_and_qwen_model_identity(request_data, kind):
     request_data.kind = kind
     calls = []
 
@@ -52,10 +60,15 @@ def test_embeds_in_order_with_task_prefix_and_model_identity(request_data, kind,
         calls.append((request.method, request.url.path))
         if request.url.path == "/api/tags":
             return httpx.Response(200, json=model_tags())
+        if request.url.path == "/api/show":
+            assert json.loads(request.content) == {"model": "qwen3:4b"}
+            return httpx.Response(200, json=model_details())
         assert json.loads(request.content) == {
-            "model": EMBEDDING_MODEL,
-            "input": [prefix + text for text in request_data.texts],
+            "model": "qwen3:4b",
+            "input": request_data.texts,
             "truncate": False,
+            "keep_alive": "1m",
+            "options": {"num_ctx": 1024, "num_batch": 64, "num_gpu": 0},
         }
         return httpx.Response(
             200, json={"model": EMBEDDING_MODEL, "embeddings": [vector(0.1), vector(0.2)]}
@@ -72,9 +85,14 @@ def test_embeds_in_order_with_task_prefix_and_model_identity(request_data, kind,
     assert result is not None
     assert result.model == EMBEDDING_MODEL
     assert result.model_digest == DIGEST
-    assert result.dimensions == 768
+    assert result.dimensions == DIMENSIONS
     assert result.vectors == [vector(0.1), vector(0.2)]
-    assert calls == [("GET", "/api/tags"), ("POST", "/api/embed"), ("GET", "/api/tags")]
+    assert calls == [
+        ("GET", "/api/tags"),
+        ("POST", "/api/show"),
+        ("POST", "/api/embed"),
+        ("GET", "/api/tags"),
+    ]
 
 
 @pytest.mark.parametrize("texts", [[], [""], ["  \n"], ["valid", " "]])
@@ -94,7 +112,7 @@ def test_missing_model_is_explicit_and_does_not_embed_or_pull(request_data):
 
     def handler(request):
         calls.append(request.url.path)
-        return httpx.Response(200, json={"models": [{"name": "qwen3:4b", "digest": DIGEST}]})
+        return httpx.Response(200, json={"models": []})
 
     with httpx.Client(
         base_url="http://ollama.test:11434", transport=httpx.MockTransport(handler)
@@ -107,6 +125,69 @@ def test_missing_model_is_explicit_and_does_not_embed_or_pull(request_data):
     assert calls == ["/api/tags"]
 
 
+@pytest.mark.parametrize("embedding_status", [200, 501])
+def test_qwen_endpoint_is_probed_without_advertised_capability(request_data, embedding_status):
+    calls = []
+
+    def handler(request):
+        calls.append(request.url.path)
+        if request.url.path == "/api/tags":
+            # An alternative is installed, but the adapter must never use it.
+            return httpx.Response(
+                200,
+                json={
+                    "models": model_tags()["models"]
+                    + [{"name": "another-embedding-model", "digest": "b" * 64}]
+                },
+            )
+        body = json.loads(request.content)
+        assert body["model"] == "qwen3:4b"
+        if request.url.path == "/api/show":
+            details = model_details()
+            details["capabilities"] = ["completion", "tools", "thinking"]
+            return httpx.Response(200, json=details)
+        assert request.url.path == "/api/embed"
+        if embedding_status == 501:
+            return httpx.Response(501, json={"error": "Start with --embeddings"})
+        return httpx.Response(200, json={"model": "qwen3:4b", "embeddings": [vector(), vector()]})
+
+    with httpx.Client(
+        base_url="http://ollama.test:11434", transport=httpx.MockTransport(handler)
+    ) as client:
+        response = OllamaEmbeddings(client)(request_data)
+
+    if embedding_status == 200:
+        assert response.ok and response.error is None
+        assert response.data.model == "qwen3:4b"
+        assert calls == ["/api/tags", "/api/show", "/api/embed", "/api/tags"]
+    else:
+        assert not response.ok and response.data is None
+        assert response.error.code == "EMBEDDING_UNAVAILABLE"
+        assert "embedding_server" in response.error.message
+        assert "11435" in response.error.message
+        assert not response.error.retryable
+        assert calls == ["/api/tags", "/api/show", "/api/embed"]
+
+
+@pytest.mark.parametrize("dimensions", [None, 0, -1, True, "2560"])
+def test_invalid_declared_dimensions_are_rejected(request_data, dimensions):
+    def handler(request):
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json=model_tags())
+        assert request.url.path == "/api/show"
+        details = model_details()
+        details["model_info"]["qwen3.embedding_length"] = dimensions
+        return httpx.Response(200, json=details)
+
+    with httpx.Client(
+        base_url="http://ollama.test:11434", transport=httpx.MockTransport(handler)
+    ) as client:
+        response = OllamaEmbeddings(client)(request_data)
+
+    assert not response.ok and response.data is None
+    assert response.error.code == "INVALID_MODEL_OUTPUT"
+
+
 @pytest.mark.parametrize(
     ("payload", "raw"),
     [
@@ -114,8 +195,8 @@ def test_missing_model_is_explicit_and_does_not_embed_or_pull(request_data):
         ({"model": EMBEDDING_MODEL, "embeddings": [vector()]}, None),
         ({"model": EMBEDDING_MODEL, "embeddings": [vector(), vector()[:-1]]}, None),
         ({"model": EMBEDDING_MODEL, "embeddings": [vector(), vector(0)]}, None),
-        ({"model": EMBEDDING_MODEL, "embeddings": [vector(), ["0.25"] * 768]}, None),
-        ({"model": EMBEDDING_MODEL, "embeddings": [vector(), [True] * 768]}, None),
+        ({"model": EMBEDDING_MODEL, "embeddings": [vector(), ["0.25"] * DIMENSIONS]}, None),
+        ({"model": EMBEDDING_MODEL, "embeddings": [vector(), [True] * DIMENSIONS]}, None),
         ({"model": EMBEDDING_MODEL}, None),
         pytest.param(
             None,
@@ -159,6 +240,8 @@ def test_changed_model_digest_discards_vectors(request_data):
         if request.url.path == "/api/tags":
             reads += 1
             return httpx.Response(200, json=model_tags(DIGEST if reads == 1 else "b" * 64))
+        if request.url.path == "/api/show":
+            return httpx.Response(200, json=model_details())
         return httpx.Response(
             200, json={"model": EMBEDDING_MODEL, "embeddings": [vector(), vector()]}
         )
@@ -181,6 +264,7 @@ def test_changed_model_digest_discards_vectors(request_data):
         (404, "EMBEDDING_UNAVAILABLE", False),
         (429, "BUSY", True),
         (500, "EMBEDDING_UNAVAILABLE", True),
+        (501, "EMBEDDING_UNAVAILABLE", False),
     ],
 )
 def test_upstream_http_errors_have_explicit_envelopes(request_data, status, code, retryable):
@@ -195,13 +279,15 @@ def test_upstream_http_errors_have_explicit_envelopes(request_data, status, code
     ("error_type", "code"),
     [(httpx.ConnectError, "EMBEDDING_UNAVAILABLE"), (httpx.ReadTimeout, "MODEL_TIMEOUT")],
 )
-@pytest.mark.parametrize("failed_path", ["/api/tags", "/api/embed"])
+@pytest.mark.parametrize("failed_path", ["/api/tags", "/api/show", "/api/embed"])
 def test_transport_errors_release_the_shared_lock(request_data, error_type, code, failed_path):
     request_lock = Lock()
 
     def handler(request):
         if request.url.path == failed_path:
             raise error_type("simulated failure", request=request)
+        if request.url.path == "/api/show":
+            return httpx.Response(200, json=model_details())
         return httpx.Response(200, json=model_tags())
 
     with httpx.Client(

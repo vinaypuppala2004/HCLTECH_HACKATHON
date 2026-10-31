@@ -8,8 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from evidencedesk.contracts.models import EmbeddingInput, EmbeddingOutput, Envelope
 from evidencedesk.core.responses import failure, success
 
-EMBEDDING_MODEL = "nomic-embed-text:v1.5"
-EMBEDDING_DIMENSIONS = 768
+EMBEDDING_MODEL = "qwen3:4b"
 _DEFAULT_REQUEST_LOCK = Lock()
 
 
@@ -33,8 +32,15 @@ class _EmbedResponse(BaseModel):
     embeddings: list[list[float]]
 
 
+class _ModelDetails(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    capabilities: list[str]
+    model_info: dict[str, object]
+
+
 class OllamaEmbeddings:
-    """Implement EmbeddingPort using a caller-owned HTTP client and shared lock.
+    """Use only qwen3:4b against a configured embedding-mode Ollama runner.
 
     The client supplies the Ollama base URL and timeout. Pass the same request_lock
     to future generation adapters to share the single-model request limit.
@@ -56,13 +62,23 @@ class OllamaEmbeddings:
                     "EMBEDDING_UNAVAILABLE",
                     f"Required local model {EMBEDDING_MODEL} is not installed.",
                 )
-            prefix = "search_query: " if request.kind == "query" else "search_document: "
+            response = self._client.post("/api/show", json={"model": EMBEDDING_MODEL})
+            response.raise_for_status()
+            details = _ModelDetails.model_validate(response.json())
+            # /api/show describes the model file, not runtime flags. A separate
+            # runner can enable raw Qwen embeddings without changing this list.
+            architecture = details.model_info.get("general.architecture")
+            dimensions = details.model_info.get(f"{architecture}.embedding_length")
+            if type(dimensions) is not int or dimensions < 1:
+                return failure("INVALID_MODEL_OUTPUT", "Model embedding dimensions are invalid.")
             response = self._client.post(
                 "/api/embed",
                 json={
                     "model": EMBEDDING_MODEL,
-                    "input": [prefix + text for text in request.texts],
+                    "input": request.texts,
                     "truncate": False,
+                    "keep_alive": "1m",
+                    "options": {"num_ctx": 1024, "num_batch": 64, "num_gpu": 0},
                 },
             )
             response.raise_for_status()
@@ -72,11 +88,11 @@ class OllamaEmbeddings:
                     "INVALID_MODEL_OUTPUT", "Ollama returned a different embedding model."
                 )
             if len(result.embeddings) != len(request.texts) or any(
-                len(vector) != EMBEDDING_DIMENSIONS or not any(vector)
-                for vector in result.embeddings
+                len(vector) != dimensions or not any(vector) for vector in result.embeddings
             ):
                 return failure(
-                    "INVALID_MODEL_OUTPUT", "Expected one nonzero 768-dimensional vector per text."
+                    "INVALID_MODEL_OUTPUT",
+                    "Expected one nonzero vector per text with the model's declared dimensions.",
                 )
             if self._model_digest() != digest:
                 return failure(
@@ -88,7 +104,7 @@ class OllamaEmbeddings:
                 EmbeddingOutput(
                     model=EMBEDDING_MODEL,
                     model_digest=digest,
-                    dimensions=EMBEDDING_DIMENSIONS,
+                    dimensions=dimensions,
                     vectors=result.embeddings,
                 )
             )
@@ -102,6 +118,13 @@ class OllamaEmbeddings:
                 )
             if status == 429:
                 return failure("BUSY", "Ollama is busy.", retryable=True)
+            if status == 501:
+                return failure(
+                    "EMBEDDING_UNAVAILABLE",
+                    "The Qwen runner is not in embedding mode. Start "
+                    "python -m evidencedesk.retrieval.embedding_server and use "
+                    "http://127.0.0.1:11435 for the embedding client.",
+                )
             return failure(
                 "EMBEDDING_UNAVAILABLE",
                 f"Ollama embedding request failed with HTTP {status}.",

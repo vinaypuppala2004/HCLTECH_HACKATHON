@@ -1,27 +1,26 @@
 # Person C progress
 
 - Role: retrieval, answer generation, and shared contracts.
-- Completed: retrieval stub, typed contracts, and mock answer/verification tools.
-- C1 increment: opt-in `OllamaEmbeddings` implements the existing embedding port
-  for `nomic-embed-text:v1.5`. It validates vector count, dimensions, finite values,
-  and model identity; adds query/document prefixes; and accepts a shared model lock.
-  D's integration instructions and the error table are in `docs/embeddings.md`.
+- Current model policy: user requires only `qwen3:4b`. The earlier Nomic experiment
+  is superseded and is not a completed Qwen embedding feature.
+- C1 increment: `OllamaEmbeddings` is locked to `qwen3:4b` and checks advertised
+  embedding support before sending input. It never selects another installed model.
+  Vector validation, model identity checks, and shared request locking remain.
+- Live check: local Qwen advertises `completion`, `tools`, and `thinking`, with no
+  `embedding` capability. A direct embedding request returned HTTP 501. The guarded
+  adapter returned `EMBEDDING_UNAVAILABLE`; successful Qwen vectors are pending.
 - C4 increment: claim verification rejects inapplicable evidence and blank or invalid
-  quotes. Exact quotes from inapplicable sources retain `quote_valid=true` with an
+  quotes. Valid quotes from inapplicable sources retain `quote_valid=true` with an
   `unsupported` verdict, triggering the existing API fallback.
-- Next: add Qdrant persistence, then hybrid ranking and local grounded generation.
+- Next: implement BM25 lexical retrieval, then grounded Qwen drafting. Semantic
+  retrieval and Qdrant vector persistence need working embeddings under this policy.
 - Handoff: D owns FastAPI, configuration, dependency wiring, and API orchestration.
-- Local setup: installed `nomic-embed-text:v1.5` in Ollama storage; model files
-  are outside Git. Verified the missing-model error before installation.
-- Live check: generated two synthetic passage vectors and one query vector, all
-  768-dimensional, using model digest
-  `0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f`.
-  The first 60-second call timed out during cold start; a retry using a 180-second
-  client timeout succeeded. D should manage warmup/readiness and timeout policy.
-- Verification: Python 3.13.18 with the pinned lock; `pytest -q` passed all 45
-  tests (30 embedding cases, 14 citation/fallback cases, and the mock chat smoke test).
-  `ruff check .`, `ruff format --check .`, and `git diff --check` passed.
-  Pytest reported one dependency deprecation warning about Starlette's httpx client.
-- Limitations: semantic support and conflict verification remain unimplemented;
-  passing citation checks still report only `limited` evidence strength. The API
-  remains in mock mode; Qdrant persistence, ranking, and D's live wiring are pending.
+  `.env.example` uses Qwen for both model fields; D must align the two legacy
+  embedding defaults in `core/settings.py`. C has not edited D's files.
+- Verification: Python 3.13.18; all 54 tests passed, including the no-substitution
+  regression and existing mock chat smoke test. Ruff lint, format, and diff checks
+  passed. The live capability guard returned the expected explicit error.
+  Pytest reported one existing Starlette/httpx dependency deprecation warning.
+- Limitations: API tools still use mocks; semantic answer support, conflict
+  verification, live generation, and evaluation are not complete. Existing Nomic
+  weights have not been deleted, and no Nomic model calls are made by the new adapter.

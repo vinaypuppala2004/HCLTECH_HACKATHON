@@ -4,7 +4,8 @@
 - Completed: HTTP-backed Streamlit chat and supporting-evidence display; A1 upload
   controls and source browsing; A2 context controls and conflict comparisons;
   A3 claim citations, fallback states, and query service errors; A4 session history
-  and submission handling across reruns.
+  and submission handling across reruns; A5 frontend checks, README, and a
+  separate synthetic panel presentation with presenter runbook.
 - A1 uploads: PDF/HTML/Markdown/TXT, in-memory base64 payloads with all required
   metadata keys, explicit submission, and 20-file / 10 MB per-file / 50 MB batch
   checks. Each ready/duplicate/rejected result is shown separately. Mock
@@ -14,9 +15,10 @@
   Synthetic sources, empty results, and request errors are explicit. A rerun
   does not resubmit uploads or source requests; switching sources hides stale
   passages. README includes A1 usage.
-- Scope: A1–A4 are complete; A5 remains pending. A4 changes only session history
-  and submission handling; A1–A3 controls/presentation modules are unchanged.
-  No backend, contract, dependency, or README files changed in A4.
+- Scope: Person A tasks A1–A5 are complete. A5 adds a separate presentation
+  entry point, frontend-owned synthetic examples/tests, a presenter runbook,
+  and README guidance. Existing A1–A4 app/modules, backend, contracts,
+  dependencies, and shared plan sections are unchanged in A5.
 - Blockers: none recorded.
 - A1 verification (2026-10-31, Python 3.13.13, pinned requirements):
   - `python -m pytest -v tests/ui tests/acceptance/test_smoke.py`: 19 passed,
@@ -111,3 +113,39 @@
   Browser reload/new sessions and server restarts are outside this persistence
   scope. No durable storage or backend idempotency was added; live services
   remain unimplemented. Interrupted/rerender-failure cases use synthetic tests.
+- A5 presentation: `ui/demo.py` is an explicitly separate synthetic preview,
+  reusing the answer/conflict renderers with seven fixed contract-valid
+  examples. It covers citations, version comparison/selection, unresolved
+  same-context contradictions, clarification, no support, and failed
+  verification. Sources have synthetic origins, exact quotes, stable IDs, real
+  content hashes, and no invented public URLs. The preview makes no API/model/
+  index calls and never replaces an error in the main app.
+- A5 documentation: `ui/DEMO.md` provides the frontend five-minute walkthrough,
+  preflight observations, and a failure/recovery rehearsal, complementing C's
+  shared script. README now covers all frontend tasks, preview startup, current
+  limitations, test coverage, session semantics, and troubleshooting. Environment
+  setup commands preserve an existing `.env` on Windows and macOS/Linux.
+- A5 verification (2026-10-31, Python 3.13.13, unchanged pinned requirements):
+  - `python -m pytest -q -o faulthandler_timeout=30`: 114 passed (17 A5 cases
+    and all 97 prior tests), with the existing Starlette/httpx deprecation
+    warning. Integration tests ran outside the sandbox for the limitation
+    recorded above.
+  - `python -m ruff check .`, `python -m ruff format --check .`, and
+    `git diff --check`: passed.
+  - Started temporary FastAPI, main-app, and preview servers; all health checks
+    passed. The normal rehearsal verified a cited answer and source browsing
+    over real HTTP, explicit NOT_IMPLEMENTED upload rejection, and no repeated
+    chat request after a context edit.
+  - Browser QA inspected the default narrow view and a temporary desktop
+    viewport, side-by-side versions, context selection without local
+    resolution, the separate resolved v2 example, and exact citation details.
+    Saved a labelled preview screenshot outside the repository; restored the
+    viewport and closed the temporary tab afterward.
+  - The second rehearsal stopped the backend, retained chat history without
+    another request, showed one explicit connection failure, rendered all
+    seven preview examples without a backend, restarted FastAPI, and completed
+    a new explicit query. All temporary processes stopped after the checks.
+- A5 limitations: presentation data is synthetic, not saved live results or
+  measured evaluation. Substring checks do not establish semantic support.
+  Live adapters and D's measured evaluation report remain outside this frontend
+  task; no evaluation scores or live-completion claims were added.

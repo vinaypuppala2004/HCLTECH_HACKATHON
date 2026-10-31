@@ -85,7 +85,7 @@ All questions currently return that same fixture; the full script is future work
 - [x] A2: Add product/version/environment controls and side-by-side conflicts.
 - [x] A3: Show claim citations, fallback states, and clear service errors.
 - [x] A4: Preserve session history without repeating requests on rerun.
-- [ ] A5: Finish frontend checks, README, and panel-facing demo presentation.
+- [x] A5: Finish frontend checks, README, and panel-facing demo presentation.
 
 Acceptance: UI states work against mocks and live responses without hidden fallback.
 Progress: `progress/member-a.md`.

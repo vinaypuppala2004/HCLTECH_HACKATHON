@@ -144,9 +144,14 @@ Progress: `progress/member-c.md`.
 - [x] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
 - [x] D2: Wire B/C tools through shared ports; manage startup and request concurrency.
 - [x] D3: Label 25 questions from the supplied real corpus; freeze 8 held-out cases before tuning.
-- [ ] D4: Integrate Ragas with explicitly local model and embedding providers.
+- [x] D4: Integrate Ragas with explicitly local model and embedding providers.
 - [ ] D5: Measure retrieval, faithfulness, citations, fallback, and latency.
+  - [x] Collect 25 real responses and offline Ragas context precision,
+    source/evidence recall, citation integrity, outcomes, and latency.
+  - Full Ollama grading stopped at user request; partial grades preserved.
 - [ ] D6: Review grading; produce the report and five evidence-backed examples.
+  - [x] Store direct assistant review of all 25 saved responses and a report
+    with separate development/held-out results. Verdicts are not Ragas LLM scores.
 - [x] D7: Run API/acceptance checks and provide the live startup/demo runbook; evaluation report excluded.
 
 Acceptance: the API integrates all modules with clear errors; evaluation is

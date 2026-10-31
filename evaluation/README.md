@@ -2,7 +2,74 @@
 
 Person D owns the labelled dataset, Ragas integration, report, and demo examples.
 Person D also owns the FastAPI backend and runtime wiring in `api/` and `core/`.
-Ragas is planned, not installed or executed by the mock skeleton.
+Ragas 0.4.3 is integrated as a separate local evaluation job. The application
+environment and interactive request path do not import or execute Ragas.
+
+## Run and stored outputs
+
+### Fast direct review, without Ollama grading
+
+The 2026-10-31 run collected all 25 real responses. At the user's request,
+Ollama grading was stopped and the saved responses were reviewed directly.
+`python -m evaluation.direct --output <saved-run-directory>` regenerates that
+specific run's reviewed report and offline Ragas context precision, with no
+Ollama calls. Stored review annotations are specific to those responses, not an
+automatic judge for future runs. Assistant verdicts are explicitly separate from
+Ragas scores; partial earlier model grades are preserved separately.
+
+Stored report: `var/evaluation/enterprise-v1-ragas-20261031/report.md`.
+Stable direct-review report/summary copies are retained beside it.
+
+Use an isolated environment: Ragas needs a compatible LangChain 0.3 stack and
+packaging 25, while the application keeps its original pinned lock. The complete
+evaluation lock is `evaluation/requirements.lock`; do not install it over the
+running application's environment.
+
+```powershell
+python -m venv var\ragas-venv
+.\var\ragas-venv\Scripts\python.exe -m pip install -r evaluation/requirements.lock
+.\var\ragas-venv\Scripts\python.exe -m pip install -e . --no-deps
+.\var\ragas-venv\Scripts\python.exe -m evaluation.run --backend http://127.0.0.1:8017 --output var/evaluation/enterprise-v1-ragas-20261031
+```
+
+Ollama must have `qwen3:4b` and `nomic-embed-text:v1.5` installed. Both providers
+use loopback HTTP with no cloud fallback. Ragas telemetry and LangChain tracing
+are disabled. Native 768-dimensional Nomic query vectors score answer relevancy;
+document vectors score semantic similarity. Production retrieval retains its
+separate 512-dimensional stored profile.
+
+The runner validates frozen UTF-8 label/provenance/review hashes, checks the exact
+16 indexed source hashes, and records model digests and application/index state.
+It collects 17 development responses followed by 8 held-out responses, with no
+gold answers or source metadata supplied to the application. All query scope
+fields are null because the dataset supplies no explicit user scope. It does not
+tune or repair the application after seeing any held-out output.
+
+Phases can be run separately with `--phase collect`, `--phase score`, and
+`--phase report`. Existing observations and scores resume without replacement;
+changed models, corpus, labels, or grading configuration cannot be mixed into
+the same run. Reports/results stay in ignored `var/evaluation/`.
+
+Artifacts include `report.md`, `summary.json`, separate development/held-out
+results JSONL, complete API envelopes/latencies, source/passage snapshots, per-case
+scores, structured judge outputs/reasons, embedding caches, model/configuration
+manifests, and a dependency lock. `var/evaluation/latest.json` links the latest
+finished report. Results are real observations, including failures and abstentions.
+
+Metrics are Ragas Faithfulness, ContextRecall, non-LLM context precision with
+reference (threshold 0.5), AnswerRelevancy (strictness 1), and SemanticSimilarity.
+Ragas metric prompts/formulas are unchanged. Non-LLM precision is text similarity,
+not the LLM-based precision metric; passage/excerpt length affects it. Additional
+deterministic checks report source Recall@5, exact-quote evidence Recall@5 when
+all references map unambiguously by source hash/text, citation integrity, outcome
+coverage, and wall latency. Unmapped evidence is NA, not a fabricated passage ID.
+
+No factual answer means NA for answer metrics, with the case retained in answer
+coverage. Metric errors/undefined values stay explicit; no NaN/zero substitution
+or exclusion without a denominator. Every dataset question is answerable, so this
+set cannot measure correct rejection of unsupported questions. The same local
+4B model drafts and judges: a human/domain review is still valuable, and scores
+are not an independent guarantee of correctness.
 
 ## Real-document golden set (recommended)
 

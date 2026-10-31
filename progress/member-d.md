@@ -82,3 +82,20 @@
   TestClient dependency deprecation warning remains. No lock pins were changed.
 - Live model request repetition was stopped at the user's direction. All remaining
   behavior checks use deterministic fixtures; optional model checks are opt-in.
+
+## Evaluation delivery — 2026-10-31
+
+- Isolated Ragas 0.4.3 providers and pinned evaluation lock implemented.
+- Collected 25 real API responses without changing the application or labels;
+  original UTF-8 canonical freeze hashes and split membership verified.
+- At user direction, stopped Ollama grading and completed direct assistant review
+  plus actual offline Ragas non-LLM context precision. No additional model calls.
+- Results: 5 correct, 2 partial, 4 incorrect, 2 non-answers, 12 abstentions.
+  Strict direct-review correctness is 5/25 (20%); this is not a Ragas LLM score.
+  Exact quotation integrity is 29/29; source Recall@5 is 25/25. These checks do
+  not establish semantic correctness. Full per-case details and split means saved.
+- Artifacts: `var/evaluation/enterprise-v1-ragas-20261031/`: report, summary,
+  direct review, split JSONL, raw API observations, source snapshots, partial
+  original Ollama grades, judge records, and dependency lock. Generated results
+  stay ignored. Full Ragas model-graded metrics remain incomplete by request.
+- Checks: 477 tests passed; lint/format checks passed before final documentation.

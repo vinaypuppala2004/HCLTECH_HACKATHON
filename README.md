@@ -1,12 +1,13 @@
 # EvidenceDesk
 
-A mock-first local enterprise-documentation Q&A assistant with a Streamlit frontend.
-The planned product uses Ollama `qwen3:4b`, local embeddings, Qdrant local
-persistence, and Ragas evaluation. **Live integrations are not implemented.**
+A local enterprise-documentation Q&A assistant with a Streamlit frontend.
+Live mode connects Ollama `qwen3:4b`, Nomic embeddings, persistent local Qdrant,
+hybrid retrieval, grounded drafting, and semantic answer verification.
+**Ragas evaluation remains pending.** See [the live runbook](docs/live-runbook.md).
 
-Every question currently returns the same synthetic password-reset passage.
-The app requires no running Ollama, Qdrant, downloaded documents, or API keys.
-Ingestion returns per-file `NOT_IMPLEMENTED` rejections and never saves uploads.
+The default mock mode returns the fixed synthetic password-reset passage and
+needs no Ollama or documents. Live mode indexes uploads, preserves exact citation
+excerpts, and exposes conflicts or requests context. Neither mode saves raw uploads.
 
 ## Install — Windows PowerShell
 
@@ -21,7 +22,8 @@ if (-not (Test-Path -LiteralPath .env)) {
 }
 ```
 
-Keep `APP_MODE=mock`. Dependency installation needs internet; mock runtime does not.
+Use `APP_MODE=mock` for the fixture demo or `APP_MODE=live` for your documents.
+Dependency/model installation needs internet; runtime uses local services.
 
 ## Run — two terminals
 
@@ -139,11 +141,11 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/v1/query -ContentType 
 |---|---|
 | `BACKEND_UNREACHABLE` | Start FastAPI in its own terminal; match `BACKEND_URL` to its host and port. Submit again explicitly. |
 | `REQUEST_TIMEOUT` or `MODEL_TIMEOUT` | Check backend/service logs and readiness, then retry when ready. The UI does not replace failures with mock data. |
-| Upload reports `NOT_IMPLEMENTED` | Expected with the current ingestion stub. The file was rejected and is not indexed. |
+| Upload reports `NOT_IMPLEMENTED` | Expected in mock mode. Set the backend to live mode for indexing. |
 | Different questions return the same passage | Expected in mock mode; scope is sent but the backend ignores it. |
 | A context edit leaves an old answer unchanged | History retains the context used for that turn. Submit a new question for a new response. |
 | History is empty after reload/restart | History is session-local; durable storage is not implemented. |
-| Health says ready but no live service is available | `ready=true` describes the mock backend, not Ollama, Qdrant, or live ingestion. |
+| Health says ready but no live service is available | Check `mode`: mock readiness describes only the fixture. Live readiness checks model presence and the index. |
 
 After dependencies are installed, mock runtime and the presentation preview
 operate locally without external API keys or model downloads. First-time
@@ -164,8 +166,8 @@ src/evidencedesk/
   contracts/     C: models and callable ports
   mocks/         C: shared synthetic source
 ui/              A: frontend / Streamlit
-evaluation/      D: future Ragas dataset/report
-corpus/          B: future curated documents
+evaluation/      D: labelled datasets; Ragas scoring/report pending
+corpus/          B: curated public-source inventory and license notices
 tests/           Owned module folders and D's acceptance smoke test
 progress/        One file per person
 ```
@@ -174,5 +176,5 @@ No Node app or `package.json` is needed. Shared Python dependency files are
 `pyproject.toml`, `requirements.txt`, and `requirements.lock`.
 
 Do not commit `.env`, uploads, models, or Qdrant runtime data. Only the backend
-should open the future Qdrant local store. `APP_MODE=live` deliberately fails
-until real adapters exist. Mock checks and timings are not Ragas quality scores.
+opens the Qdrant local store. Use `APP_MODE=live` to select the live adapters;
+keep one backend worker per index path. Mock checks are not Ragas quality scores.

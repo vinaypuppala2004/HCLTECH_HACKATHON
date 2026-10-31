@@ -39,10 +39,12 @@ with httpx.Client(base_url="http://127.0.0.1:11434", timeout=180, trust_env=Fals
     with QdrantIndex("var/qdrant", embed) as index:
         # Person B supplies parsed Document and Passage records:
         # result = index.index_document(document, passages)
-        response = index.search(QueryInput(
-            question="How do I reset my password?",
-            context=Scope(product=None, version=None, environment=None),
-        ))
+        response = index.search(
+            QueryInput(
+                question="How do I reset my password?",
+                context=Scope(product=None, version=None, environment=None),
+            )
+        )
 ```
 
 D owns API wiring and the lifetime of this single local client. B's parser calls

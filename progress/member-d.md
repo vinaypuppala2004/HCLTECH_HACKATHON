@@ -64,3 +64,21 @@
   multiple server workers. Current ports expose no resource-close hooks and current
   mock tools open no Ollama/Qdrant clients; live resource ownership remains pending
   those adapters.
+
+## Live completion integration — 2026-10-31
+
+- User authorized remaining application work across ownership boundaries, excluding
+  Ragas evaluation. D4–D6 remain pending; no scoring, held-out tuning, or report added.
+- FastAPI explicitly supports mock/live mode. The live factory wires actual ingestion,
+  source reads, hybrid retrieval, grounded Qwen drafting, and semantic verification.
+- Health uses real committed counts and model availability; invalid configuration
+  fails explicitly. Backend shutdown drains requests and closes model/index clients.
+- A complete 16-document / 420-passage corpus imported through HTTP. Source hash/
+  location-to-passage mapping is available in ignored `var/corpus-import.json`.
+- Python 3.13.5 with the pinned lock: 472 automated tests passed (including mock
+  UI/API smoke, live wiring with synthetic Ollama responses, adaptive chunking,
+  version scope, invalid-quote/semantic fallback, outages, close/reopen, and restart).
+  Ruff lint, format, pip check, and git diff --check passed. Existing Starlette
+  TestClient dependency deprecation warning remains. No lock pins were changed.
+- Live model request repetition was stopped at the user's direction. All remaining
+  behavior checks use deterministic fixtures; optional model checks are opt-in.

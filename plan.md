@@ -11,18 +11,19 @@ Architecture: Streamlit → FastAPI → retrieval → draft → verification →
 Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → BM25 and
 semantic retrieval. Use `qwen3:4b` for generation and `nomic-embed-text:v1.5` for
 embeddings. The C1 adapter stores 512-dimensional Nomic MRL vectors in local
-Qdrant, with committed revisions and restart support. BM25 fusion, version
-counterparts, API wiring, and held-out evaluation remain pending.
+Qdrant, with committed revisions and restart support. Live ingestion, BM25/semantic
+fusion, version counterparts, Qwen drafting, semantic verification, and API wiring
+are integrated. Ragas scoring and held-out evaluation remain pending.
 
 ### Tech stack
 | Component | Choice | Skeleton status |
 |---|---|---|
-| Interface | Streamlit | HTTP-backed mock chat |
-| Backend | Python / FastAPI / Pydantic | Typed routes and tool wiring |
-| Generation | Ollama `qwen3:4b` | Planned; no inference |
-| Embeddings | `nomic-embed-text:v1.5`, 512-dimensional MRL profile | Live adapter implemented; API still mock |
+| Interface | Streamlit | Live chat/uploads/sources and separate synthetic preview |
+| Backend | Python / FastAPI / Pydantic | Explicit mock/live tools, lifecycle, readiness, and concurrency |
+| Generation | Ollama `qwen3:4b` | Grounded drafting and semantic verification |
+| Embeddings | `nomic-embed-text:v1.5`, 512-dimensional MRL profile | Live adapter wired into API |
 | Vector storage | Qdrant local persistent directory | C1 persistence and restart implemented |
-| Retrieval | Semantic search with scope filters; BM25 fusion pending | Opt-in C1 index; default API uses fixture |
+| Retrieval | BM25 + semantic RRF, scope filters, version counterparts | Wired into explicit live mode |
 | Evaluation | Ragas with local Ollama and labelled checks | Planned; no scores |
 
 ### Team and ownership
@@ -81,7 +82,9 @@ silently substitute mocks. Cut polish before citations, conflicts, or evaluation
 
 Use clearly labelled saved live results if timing requires them. Current skeleton
 demo: ask "How do I reset my password?" and show the fixed mock reply/source.
-All questions currently return that same fixture; the full script is future work.
+Mock questions return that fixture. Live mode indexes real documents; see
+`docs/live-runbook.md`. The separate frontend preview is explicitly synthetic.
+Ragas measurements/report remain outside this completion task.
 
 ## Person A — Frontend — edit only this section
 - [x] Streamlit chat sends HTTP requests and displays replies/evidence.
@@ -96,25 +99,22 @@ Progress: `progress/member-a.md`.
 
 ## Person B — Chunking — edit only this section
 - [x] Ingestion/source-reader stubs and owned folders exist.
-- [ ] B1: Curate public sources and provenance; label synthetic fixtures.
+- [x] B1: Curate public sources and provenance; label synthetic fixtures.
 - [x] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
 - [x] B3: Segment passages with headings, overlap, and stable source IDs.
-- [ ] B4: Report empty/corrupt inputs; send passages to C's indexing port.
+- [x] B4: Report empty/corrupt inputs; send passages to C's indexing port.
   - [x] Add opt-in upload validation, strict base64/limits, and per-file errors.
-  - [ ] Connect C's agreed indexing port and verify actual committed results.
-- [ ] B5: Verify formats and deduplication; share source IDs with D for labels.
+  - [x] Connect C's indexing port and verify committed receipts/source IDs.
+- [x] B5: Verify formats and deduplication; share source IDs with D for labels.
 
-Person B phases map directly to B1–B5 above. Phase 2 parsing is complete and
-preserves PDF pages, HTML/Markdown headings, and source line ranges. Phase 3 adds
-exact source slices with configurable character limits and overlap (defaults:
-1,200/200), deterministic document/passage IDs, and internal location records.
-Chunks never cross source blocks or pages. Output uses the existing contracts;
-default ingestion and source tools remain mocked. Phase 4's opt-in validator
-prepares files in memory and reports per-file errors using the existing envelope;
-valid files remain rejected/NOT_IMPLEMENTED until indexing is connected. At the
-user's direction, C's undefined indexing handoff stays pending and B4 is not
-complete. Phase 1 source curation and phase 5 deduplication/label handoff are also
-pending. Study checklists for phases 2–3 live in the owned ingestion folder.
+Person B phases B1–B5 are integrated. The supplied 16-document public archive
+has a provenance inventory and license notices in `corpus/`. PDF layout extraction
+preserves page order; HTML text groups within headings for live indexing. Live
+chunks use 4,096/200, with deterministic 1,800/200 retry on embedding length rejection.
+The actual corpus commits 420 passages within the unchanged 500-passage limit.
+Duplicate content/metadata does not bump revisions. `var/corpus-import.json`
+records actual source IDs and passage locations; raw uploads are never committed.
+The original parsing/chunking library interfaces and mock tools remain available.
 
 Acceptance: citation locations survive chunking; failed files never appear indexed.
 Progress: `progress/member-b.md`.
@@ -127,13 +127,13 @@ Progress: `progress/member-b.md`.
   - [x] Implement the trained 512-dimensional MRL profile and index compatibility metadata.
   - [x] Persist documents, passage locations, and revisions; reject incomplete writes.
   - [x] Verify restart and compare 512/768 dimensions on eight synthetic development cases.
-  - Latest cleanup/documentation edits are unverified; user requested no further checks.
-- [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
-  - [ ] Add BM25 lexical ranking and fuse it with the C1 semantic results.
-- [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
-- [ ] C4: Add verification/fallback and index B's passages; expose tools to D.
+  - Integration is covered by the current full automated suite and real corpus import.
+- [x] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
+  - [x] Add BM25 lexical ranking and fuse it with the C1 semantic results.
+- [x] C3: Add grounded Qwen drafting, conflict/clarification logic, and optional benchmark tooling.
+- [x] C4: Add verification/fallback and index B's passages; expose tools to D.
   - [x] Reject inapplicable or invalid claim citations; verify API fallback with mocks.
-- [ ] C5: Verify restart, share ranking results, and coordinate integration with D.
+- [x] C5: Verify restart and complete live integration with D; ranking quality evaluation deferred.
 
 Acceptance: retrieval respects scope and persists; answers cite evidence and fail clearly.
 Progress: `progress/member-c.md`.
@@ -147,7 +147,7 @@ Progress: `progress/member-c.md`.
 - [ ] D4: Integrate Ragas with explicitly local model and embedding providers.
 - [ ] D5: Measure retrieval, faithfulness, citations, fallback, and latency.
 - [ ] D6: Review grading; produce the report and five evidence-backed examples.
-- [ ] D7: Run API/acceptance checks and rehearse the five-minute demo with A.
+- [x] D7: Run API/acceptance checks and provide the live startup/demo runbook; evaluation report excluded.
 
 Acceptance: the API integrates all modules with clear errors; evaluation is
 reproducible, held-out results are separate, and metrics are real.

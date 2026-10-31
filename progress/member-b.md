@@ -84,3 +84,19 @@
 - Next: C must define/provide the agreed index-writing operation; B can then
   connect prepared records, and D owns lifecycle/API wiring. B1 source curation,
   the remaining B4 indexing work, and B5 deduplication/label handoff are pending.
+
+## Live completion integration — 2026-10-31
+
+- B1/B4/B5 application work completed: curated 16-source provenance/license inventory;
+  validated uploads call the actual index and return committed per-file receipts.
+- Renamed files with identical content/metadata deduplicate; versions stay distinct.
+- Layout-aware PDF extraction preserves emphasized text order. Live HTML grouping
+  stays within headings; live chunks are 4,096/200. Model length rejection retries
+  that file at 1,800/200 without truncation or a different embedding model.
+- All 16 public corpus files imported: 420 committed passages. The RFC rejected
+  at the first size succeeded at the compact size; earlier files were duplicates
+  on rerun. Invalid files never appeared ready. The 500-passage limit is unchanged.
+- Runtime `var/corpus-import.json` maps source hashes to actual document/passage IDs,
+  pages, headings, raw-source lines and extracted-block offsets; compact IDs were
+  checked against source-read results. No raw source files/runtime storage committed.
+- Full integration suite: 472 tests passed; lint, format, dependency checks passed.

@@ -26,3 +26,22 @@
   corpus/held-out evaluation and live API integration remain separate work.
 - Latest edits are unverified: the user requested no further tests, lint,
   formatting, or verification checks. No such checks were run after that request.
+
+## Live completion integration — 2026-10-31
+
+- C2 hybrid RRF and version counterparts are wired into live search. C3 generation
+  is wired into the live draft port. Prompts use short source aliases, mapped back
+  to stable public IDs; explicit version scope deterministically resolves valid
+  version comparisons. Missing scope requests clarification without inference.
+- C4 adds deterministic citation/context/conflict gates followed by an independent
+  local Qwen semantic judgment. Unsupported/unclear output withholds factual content;
+  service failures return real errors and never substitute mocks.
+- D constructs one Qdrant client/Ollama HTTP client per lifespan and closes both
+  after draining requests. Real corpus data survived a backend process restart.
+- Full integration suite: 472 tests passed; Ruff lint/format, pip check passed.
+  No repeated model-question suite was run, per user instruction. An initial real
+  synthetic question exposed a version-handling problem; deterministic regression
+  coverage now verifies its fix. Optional benchmark tooling remains available.
+- Ragas, held-out ranking/answer quality, and an evaluation report remain pending.
+  Model-based semantic judgments can still be wrong; exact quotes do not guarantee
+  entailment. No quality score is claimed.

@@ -16,11 +16,12 @@ label mocks. Live adapters are not implemented yet.
 | `ui/`, `tests/ui/`, `README.md` (frontend) | Person A |
 | `src/evidencedesk/ingestion/`, `corpus/`, `tests/ingestion/` (chunking) | Person B |
 | `src/evidencedesk/retrieval/`, `tests/retrieval/` | Person C |
-| `src/evidencedesk/assistant/`, `api/`, `core/`, `contracts/`, `mocks/` | Person C |
+| `src/evidencedesk/assistant/`, `contracts/`, `mocks/` | Person C |
 | `tests/assistant/`, `docs/`, root configuration, `AGENTS.md` | Person C |
+| `src/evidencedesk/api/`, `core/`, `tests/api/` (FastAPI) | Person D |
 | `evaluation/`, `tests/acceptance/` | Person D |
 | `progress/member-a.md` through `member-d.md` | Matching person |
-The abbreviated C paths above are under `src/evidencedesk/`.
+The abbreviated package paths above are under `src/evidencedesk/`.
 Each person edits only their labelled section of `plan.md`; C owns shared sections.
 
 ## Git rules

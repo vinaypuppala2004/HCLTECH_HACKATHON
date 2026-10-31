@@ -74,8 +74,8 @@ src/evidencedesk/
   ingestion/     B: parsing, chunking, and source tools
   retrieval/     C: embeddings, Qdrant, search
   assistant/     C: answers and verification
-  api/           C: HTTP and orchestration
-  core/          C: configuration and dependency factory
+  api/           D: FastAPI HTTP routes and orchestration
+  core/          D: configuration and dependency factory
   contracts/     C: models and callable ports
   mocks/         C: shared synthetic source
 ui/              A: frontend / Streamlit

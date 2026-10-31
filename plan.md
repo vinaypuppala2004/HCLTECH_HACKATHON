@@ -27,14 +27,15 @@ Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → local em
 |---|---|---|
 | A — Frontend | `ui/`, `tests/ui/`, `README.md` | `feat/frontend-` |
 | B — Chunking | `src/evidencedesk/ingestion/`, `corpus/`, `tests/ingestion/` | `feat/chunking-` |
-| C — Retrieval and backend | `src/evidencedesk/{retrieval,assistant,api,core,contracts,mocks}/`, `tests/{retrieval,assistant}/`, `docs/`, root configuration | `feat/retrieval-` |
-| D — Evaluation | `evaluation/`, `tests/acceptance/` | `feat/eval-` |
+| C — Retrieval and answers | `src/evidencedesk/{retrieval,assistant,contracts,mocks}/`, `tests/{retrieval,assistant}/`, `docs/`, root configuration | `feat/retrieval-` |
+| D — FastAPI and evaluation | `src/evidencedesk/{api,core}/`, `evaluation/`, `tests/{api,acceptance}/` | `feat/backend-` |
 
 Each person edits only their section below and matching progress file. C alone
 maintains this shared baseline, milestones, checkpoints, decisions, and demo
 script. Use separate branches and working checkouts. Ask before crossing ownership.
-Backend orchestration and shared contracts belong to C alongside retrieval;
-ingestion and source preparation belong to B alongside chunking.
+FastAPI routes, configuration, dependency wiring, and request orchestration belong
+to D. C owns retrieval, answer tools, and shared contracts; D calls those tools
+through the agreed ports. B owns ingestion and chunking; A owns the frontend.
 
 ### Milestones and integration checkpoints
 | Time | Gate | Acceptance |
@@ -47,8 +48,8 @@ ingestion and source preparation belong to B alongside chunking.
 | 5:00–6:00 | Freeze | Held-out report, five examples, offline restart |
 | 6:00–7:00 | Buffer | Demo-breaking fixes and two rehearsals |
 
-At each integration checkpoint C merges small working commits, runs shared
-checks, and verifies the vertical slice. Live failures must stay explicit; never
+At each integration checkpoint C coordinates merges and D wires backend modules;
+the team runs shared checks and verifies the vertical slice. Live failures must stay explicit; never
 silently substitute mocks. Cut polish before citations, conflicts, or evaluation.
 
 ### Decisions log
@@ -65,7 +66,7 @@ silently substitute mocks. Cut polish before citations, conflicts, or evaluation
 | Required JSON keys and explicit nulls | Consistent tools, API, mocks, and UI |
 | `NOT_IMPLEMENTED` for ingestion | Never pretend an upload was indexed |
 | Shared plan sections owned by C | Prevent repeated edits to the same lines |
-| A frontend, B chunking, C retrieval, D evaluation | User-confirmed final team split |
+| A frontend, B chunking, C retrieval/answers, D FastAPI/evaluation | User-confirmed team split |
 
 ### Demo script — five minutes
 1. 0:00–0:30: Explain scattered documents, conflicting versions, and local operation.
@@ -100,25 +101,29 @@ Progress: `progress/member-a.md`.
 Acceptance: citation locations survive chunking; failed files never appear indexed.
 Progress: `progress/member-b.md`.
 
-## Person C — Retrieval and backend — edit only this section
-- [x] Shared contracts, configuration, ports, and mock fixtures exist.
-- [x] Retrieval stub, FastAPI, and mock retrieve → draft → verify workflow exist.
+## Person C — Retrieval and answers — edit only this section
+- [x] Shared contracts, ports, and mock fixtures exist.
+- [x] Retrieval, drafting, and verification stubs exist.
 - [ ] C1: Add local embeddings and backend-owned Qdrant persistence.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
 - [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
-- [ ] C4: Add verification/fallback, wire B's passages, and serialize model requests.
-- [ ] C5: Verify restart, share ranking results with D, and integrate at checkpoints.
+- [ ] C4: Add verification/fallback and index B's passages; expose tools to D.
+- [ ] C5: Verify restart, share ranking results, and coordinate integration with D.
 
 Acceptance: retrieval respects scope and persists; answers cite evidence and fail clearly.
 Progress: `progress/member-c.md`.
 
-## Person D — Evaluation — edit only this section
+## Person D — FastAPI and evaluation — edit only this section
+- [x] FastAPI routes, configuration, dependency factory, and mock orchestration exist.
 - [x] One smoke test covers API/tool wiring, chat submission, and rerun behavior.
-- [ ] D1: Label 24 questions; freeze 8 held-out cases before tuning.
-- [ ] D2: Integrate Ragas with explicitly local model and embedding providers.
-- [ ] D3: Measure retrieval, faithfulness, citations, fallback, and latency.
-- [ ] D4: Manually review grading; produce a report and five evidence-backed examples.
-- [ ] D5: Run acceptance checks and rehearse the five-minute demo with A.
+- [ ] D1: Implement FastAPI endpoints, validation, errors, and health/readiness.
+- [ ] D2: Wire B/C tools through shared ports; manage startup and request concurrency.
+- [ ] D3: Label 24 questions; freeze 8 held-out cases before tuning.
+- [ ] D4: Integrate Ragas with explicitly local model and embedding providers.
+- [ ] D5: Measure retrieval, faithfulness, citations, fallback, and latency.
+- [ ] D6: Review grading; produce the report and five evidence-backed examples.
+- [ ] D7: Run API/acceptance checks and rehearse the five-minute demo with A.
 
-Acceptance: evaluation is reproducible, held-out results are separate, and metrics are real.
+Acceptance: the API integrates all modules with clear errors; evaluation is
+reproducible, held-out results are separate, and metrics are real.
 Progress: `progress/member-d.md`.

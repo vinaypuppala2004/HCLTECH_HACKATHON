@@ -1,6 +1,7 @@
 # Evaluation ownership
 
 Person D owns the labelled dataset, Ragas integration, report, and demo examples.
+Person D also owns the FastAPI backend and runtime wiring in `api/` and `core/`.
 Ragas is planned, not installed or executed by the mock skeleton.
 
 Plan 24 labelled questions: 8 direct, 6 paraphrase, 4 conflict/version, 3 ambiguous,

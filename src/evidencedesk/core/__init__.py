@@ -1,1 +1,1 @@
-"""Configuration and dependency wiring owned by Person C."""
+"""Configuration and dependency wiring owned by Person D."""

@@ -1,4 +1,4 @@
-# Source parsing and chunking
+# Source parsing, chunking, and upload validation
 
 ## Phase 2: source parsing
 
@@ -38,8 +38,8 @@ implemented. PDF reading uses strict mode, so malformed PDFs may need repair
 outside this parser. Heading paths in PDFs are deliberately empty.
 
 Phase 3's passage builder consumes these structural units, as described below.
-Batch upload validation, per-file API errors, indexing, and deduplication remain
-later-phase work. No file is reported as indexed by these parsers.
+Phase 4 adds opt-in batch validation and per-file errors. Indexing integration
+and deduplication remain pending. No file is reported as indexed by these parsers.
 
 ## Phase 3: passage construction
 
@@ -112,6 +112,56 @@ namespace; repeated identical blocks remain distinct. Reprocessing the same
 input/settings is deterministic across Python processes. No duplicate detection
 or storage is implied by deriving these IDs.
 
+## Phase 4: validation portion; indexing connection pending
+
+`prepare_uploads(IngestInput(...), config=...)` in `batching.py` decodes and
+prepares uploads using phases 2–3. It returns an internal `PreparedBatch` with
+one `PreparedUpload` per input record, in original order. Each upload contains
+either a `PreparedDocument` or an existing-contract `ToolError`.
+`batch.documents` selects only successfully prepared documents; these are in
+memory and have never been indexed. Parser warnings and citation locations remain
+available in each prepared document.
+
+- Input uses the unchanged `IngestInput` and `Upload` models; they enforce
+  1–20 files. Base64 must be ASCII, padded when required, and contain no whitespace
+  or data-URL prefix. Decoding is strict; invalid bytes are not repaired.
+- The decoded per-file limit is 10 MiB, checked by encoded length before allocating
+  the byte buffer and by exact decoded size afterward. Empty, unsupported,
+  invalidly encoded, corrupt, and encrypted files retain their parser errors.
+  Unexpected preparation errors become generic per-file `INTERNAL_ERROR` records;
+  the remaining files continue independently.
+- The decoded batch limit is 50 MiB. If exceeded, parsing never starts and every
+  otherwise-valid file gets `BAD_INPUT`. Individual decoding errors are retained.
+  Earlier decoded buffers are released once the limit is crossed. The byte total
+  counts all successfully decoded files within the per-file limit, even if a later
+  parser would reject a file's format or text.
+- The prepared batch limit is 500 passages. Overflow discards prepared results
+  for all otherwise-valid files and reports `BAD_INPUT`; existing per-file errors
+  are retained. The cumulative corpus limit still requires C's index state.
+- Duplicate filenames and repeated bytes remain separate records. No duplicate
+  detection or `duplicate` result is implemented in this phase.
+
+`validate_documents` in `tools.py` implements the existing `IngestTool` signature
+and returns per-file results in a successful `Envelope[IngestResult]`. Invalid
+files report the validation error. Files that pass validation are still
+`rejected` / `NOT_IMPLEMENTED`: the indexing port is not connected. All results
+have `document_id=None` and `passage_count=0`, with `index_revision=0`. A prepared
+document is never described as ready or indexed merely because parsing succeeded.
+Batch rejections remain HTTP 200 when this tool is injected into D's existing API.
+
+The default factory still uses the unchanged mock `ingest_documents` and
+`read_sources`; default API behavior remains explicitly mocked. D can inspect or
+inject the validation tool through the existing tool bundle. No API/core files
+or shared contracts were edited. C's branch and main currently define no
+index-writing port. At the user's direction, that connection remains pending
+rather than inventing a signature or silently substituting a fake index.
+
+The remaining handoff is concrete: C needs an agreed indexing operation that
+accepts these existing Document/Passage records and reports actual committed
+revision/success/failure; D owns lifecycle and API wiring. The batch records are
+internal preparation output, not an agreed indexing contract. B4 stays unchecked
+until that integration is implemented and tested. B5 is not started.
+
 ## Verification and study
 
 Verification from the repository root with the pinned Python 3.13 environment:
@@ -131,3 +181,5 @@ and [markdown-it-py token maps](https://markdown-it-py.readthedocs.io/en/latest/
 
 For phase 2's learning checklist and a prompt to reuse in a new chat, see
 [STUDY_PHASE_2.md](STUDY_PHASE_2.md).
+For phase 3's changed files, learning topics, exercises, and new-chat prompt, see
+[STUDY_PHASE_3.md](STUDY_PHASE_3.md).

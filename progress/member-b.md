@@ -1,8 +1,11 @@
 # Person B progress
 
 - Role: chunking, including ingestion and source preparation.
-- Branch: `feat/chunking-phase-3`, isolated worktree rebased onto main at `b73c1ea`.
-- Scope: phase 3 (B3), after phase 2 was merged in PR #4. Phase 4 is not started.
+- Branch: `feat/chunking-phase-4`, isolated worktree rebased onto main at `91067d6`.
+- Scope: phase 4 validation portion, after phase 3 was merged in PR #8. The user
+  explicitly selected "Finish validation; keep indexing pending" because neither
+  main nor C's branch defined an indexing port. B4 is not marked complete; B5 is
+  not started. No indexing contract was invented or changed.
 - Completed: internal, in-memory parsers for PDF, HTML/HTM, Markdown/MD, and TXT.
   PDF retains original 1-based page numbers; HTML/Markdown retain heading paths;
   text formats retain inclusive source line ranges. Markdown/TXT preserve source
@@ -53,6 +56,31 @@
   passed. Temporary FastAPI/Streamlit processes started; health endpoints and an
   HTTP query with exact evidence quotes passed, and the processes were stopped.
   The existing Starlette/httpx test-client deprecation warning remains.
-- Next: B1 public-source curation, B4 batch failure reporting/indexing handoff,
-  and B5 deduplication/label handoff remain unimplemented. The public tools still
-  return mock data; uploads are never reported as indexed.
+- Phase 4 validation: `batching.py` decodes strict base64 and prepares each file
+  through phases 2–3. Internal results preserve request order and retain either
+  a prepared Document/Passage set or an existing-contract ToolError. Failed files
+  are excluded from prepared documents. Empty/corrupt/unsupported files retain
+  explicit errors; an unexpected file failure becomes a generic INTERNAL_ERROR
+  and does not stop later files. No uploads or index state are persisted.
+- Phase 4 limits: encoded-length precheck and exact decoded 10 MiB/file check;
+  50 MiB decoded/batch before parsing; 500 prepared passages/batch. Batch overflow
+  discards otherwise-valid results and preserves existing per-file errors. Corpus
+  capacity still requires C's actual index state. Repeated inputs are not deduplicated.
+- Phase 4 tool: `validate_documents` fits the frozen IngestTool signature and
+  reports per-file rejected results in a successful envelope. Valid files still
+  return NOT_IMPLEMENTED; all results have null document IDs, zero passage counts,
+  and revision zero. Default mock tools/factory behavior is preserved. An owned
+  test injects the tool into the existing API, verifies HTTP 200 per-file errors,
+  unchanged health/source state, and absence of falsely indexed documents.
+- Study handoff: `STUDY_PHASE_3.md` lists the six phase-3 files, core concepts,
+  exercises, commands, and a reusable new-chat prompt.
+- Phase 4 verification (Python 3.13): 33 new validation tests and 314 full-suite
+  tests passed after integrating team merges through `91067d6`.
+  Lint, formatting, dependency consistency, and whitespace checks
+  passed. FastAPI/Streamlit startup, health, and an HTTP query with exact evidence
+  quotes passed; temporary processes were stopped. The existing Starlette/httpx
+  test-client deprecation warning remains. No shared contracts/dependencies or
+  other owners' implementation files were edited.
+- Next: C must define/provide the agreed index-writing operation; B can then
+  connect prepared records, and D owns lifecycle/API wiring. B1 source curation,
+  the remaining B4 indexing work, and B5 deduplication/label handoff are pending.

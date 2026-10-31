@@ -112,6 +112,9 @@ Progress: `progress/member-b.md`.
 - [x] Shared contracts, ports, and mock fixtures exist.
 - [x] Retrieval, drafting, and verification stubs exist.
 - [ ] C1: Add local embeddings and backend-owned Qdrant persistence.
+  - [x] Add opt-in Ollama embedding adapter with task prefixes, validation, and model identity.
+  - [x] Verify successful local embeddings for synthetic passages and a question.
+  - [ ] Persist passage vectors in Qdrant and verify restart.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
 - [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
 - [ ] C4: Add verification/fallback and index B's passages; expose tools to D.

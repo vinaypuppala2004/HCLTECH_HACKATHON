@@ -1,10 +1,13 @@
 """Run with: python -m uvicorn evidencedesk.api.app:app --host 127.0.0.1."""
 
+import logging
+from contextlib import asynccontextmanager
 from time import perf_counter
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 
 from evidencedesk.contracts.models import (
@@ -25,6 +28,7 @@ from evidencedesk.contracts.models import (
 )
 from evidencedesk.core.factory import Tools, build_tools
 from evidencedesk.core.responses import failure, success
+from evidencedesk.core.runtime import BackendBusy, BackendRuntime
 from evidencedesk.core.settings import Settings, get_settings
 
 ERROR_STATUS = {
@@ -41,6 +45,14 @@ ERROR_STATUS = {
     "NOT_IMPLEMENTED": 501,
     "INTERNAL_ERROR": 500,
 }
+ERROR_RESPONSES = {
+    status: {
+        "model": Envelope[None],
+        "description": " / ".join(code for code, value in ERROR_STATUS.items() if value == status),
+    }
+    for status in sorted(set(ERROR_STATUS.values()))
+}
+logger = logging.getLogger(__name__)
 
 
 class ToolFailure(Exception):
@@ -49,18 +61,43 @@ class ToolFailure(Exception):
 
 
 def unwrap(response: Envelope):
-    if not response.ok or response.data is None:
-        raise ToolFailure(
-            response.error
-            or ToolError(code="INTERNAL_ERROR", message="Empty tool response.", retryable=False)
-        )
-    return response.data
+    if response.ok and response.data is not None and response.error is None:
+        return response.data
+    if not response.ok and response.data is None and response.error is not None:
+        raise ToolFailure(response.error)
+    raise ToolFailure(
+        ToolError(code="INTERNAL_ERROR", message="Invalid tool response envelope.", retryable=False)
+    )
 
 
 def create_app(settings: Settings | None = None, tools: Tools | None = None) -> FastAPI:
     settings = settings or get_settings()
-    tools = tools or build_tools(settings)
-    application = FastAPI(title="EvidenceDesk mock API", version="0.1.0")
+    if settings.app_mode != "mock":
+        raise RuntimeError("Only APP_MODE=mock is implemented; live adapters are not ready.")
+    backend = BackendRuntime(lambda: tools if tools is not None else build_tools(settings))
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        await run_in_threadpool(backend.start)
+        try:
+            yield
+        finally:
+            await run_in_threadpool(backend.stop)
+
+    application = FastAPI(
+        title="EvidenceDesk mock API",
+        version="0.1.0",
+        responses=ERROR_RESPONSES,
+        lifespan=lifespan,
+    )
+    application.state.backend = backend
+
+    @application.exception_handler(BackendBusy)
+    async def busy_backend(request: Request, exc: BackendBusy):
+        return JSONResponse(
+            status_code=ERROR_STATUS["BUSY"],
+            content=failure("BUSY", str(exc), retryable=True).model_dump(),
+        )
 
     @application.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError):
@@ -80,14 +117,21 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException):
-        code = "NOT_FOUND" if exc.status_code == 404 else "BAD_INPUT"
+        if exc.status_code >= 500:
+            code, message = "INTERNAL_ERROR", "Unexpected backend error."
+            logger.error("HTTP error %s on %s", exc.status_code, request.url.path)
+        else:
+            code = "NOT_FOUND" if exc.status_code == 404 else "BAD_INPUT"
+            message = str(exc.detail)
         return JSONResponse(
-            status_code=exc.status_code,
-            content=failure(code, str(exc.detail)).model_dump(),
+            status_code=ERROR_STATUS[code],
+            content=failure(code, message).model_dump(),
+            headers=exc.headers,
         )
 
     @application.exception_handler(Exception)
     async def unexpected_error(request: Request, exc: Exception):
+        logger.exception("Unexpected backend error on %s", request.url.path)
         return JSONResponse(
             status_code=500,
             content=failure("INTERNAL_ERROR", "Unexpected backend error.").model_dump(),
@@ -95,10 +139,11 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.get("/v1/health", response_model=Envelope[Health])
     def health():
+        """Report mock readiness and fixture counts; no live services are probed."""
         return success(
             Health(
                 mode="mock",
-                ready=True,
+                ready=backend.ready,
                 ollama_available=False,
                 generation_model=settings.generation_model,
                 embedding_model=settings.embedding_model,
@@ -109,53 +154,57 @@ def create_app(settings: Settings | None = None, tools: Tools | None = None) -> 
 
     @application.post("/v1/documents:ingest", response_model=Envelope[IngestResult])
     def ingest(request: IngestInput):
-        result = tools.ingest(request)
-        unwrap(result)
-        return result
+        with backend.request() as active_tools:
+            result = active_tools.ingest(request)
+            unwrap(result)
+            return result
 
     @application.post("/v1/sources:read", response_model=Envelope[SourcesResult])
     def sources(request: SourcesInput):
-        result = tools.sources(request)
-        unwrap(result)
-        return result
+        with backend.request() as active_tools:
+            result = active_tools.sources(request)
+            unwrap(result)
+            return result
 
     @application.post("/v1/search", response_model=Envelope[SearchResult])
     def search(request: QueryInput):
-        result = tools.search(request)
-        unwrap(result)
-        return result
+        with backend.request() as active_tools:
+            result = active_tools.search(request)
+            unwrap(result)
+            return result
 
     @application.post("/v1/query", response_model=Envelope[QueryResult])
     def query(request: QueryInput):
-        trace = []
-        started = perf_counter()
-        retrieval = unwrap(tools.search(request))
-        trace.append(_step("retrieve", started))
-        started = perf_counter()
-        draft = unwrap(tools.draft(DraftInput(query=request, retrieval=retrieval)))
-        trace.append(_step("draft", started))
-        started = perf_counter()
-        verification = unwrap(
-            tools.verify(VerifyInput(query=request, retrieval=retrieval, draft=draft))
-        )
-        trace.append(_step("verify", started))
-        if draft.claims and not verification.passed:
-            draft = Draft(
-                status="insufficient_evidence",
-                claims=[],
-                conflicts=[],
-                clarification=None,
-                fallback_reason="failed_verification",
+        with backend.request() as active_tools:
+            trace = []
+            started = perf_counter()
+            retrieval = unwrap(active_tools.search(request))
+            trace.append(_step("retrieve", started))
+            started = perf_counter()
+            draft = unwrap(active_tools.draft(DraftInput(query=request, retrieval=retrieval)))
+            trace.append(_step("draft", started))
+            started = perf_counter()
+            verification = unwrap(
+                active_tools.verify(VerifyInput(query=request, retrieval=retrieval, draft=draft))
             )
-        return success(
-            QueryResult(
-                mode="mock",
-                result=draft,
-                retrieval=retrieval,
-                verification=verification,
-                trace=trace,
+            trace.append(_step("verify", started))
+            if draft.claims and not verification.passed:
+                draft = Draft(
+                    status="insufficient_evidence",
+                    claims=[],
+                    conflicts=[],
+                    clarification=None,
+                    fallback_reason="failed_verification",
+                )
+            return success(
+                QueryResult(
+                    mode="mock",
+                    result=draft,
+                    retrieval=retrieval,
+                    verification=verification,
+                    trace=trace,
+                )
             )
-        )
 
     return application
 

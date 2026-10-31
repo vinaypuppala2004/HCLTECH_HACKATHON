@@ -9,9 +9,10 @@ insufficient. The centerpiece is side-by-side evidence and explicit version sele
 
 Architecture: Streamlit → FastAPI → retrieval → draft → verification → cited reply.
 Planned ingestion: PDF/HTML/Markdown/TXT → heading-aware passages → BM25 and
-semantic retrieval. Use only `qwen3:4b` for model calls. An isolated embedding-mode
-runner now produces raw Qwen vectors; Qdrant indexing and retrieval evaluation
-remain pending. Combine ranked results through reciprocal rank fusion.
+semantic retrieval. Use `qwen3:4b` for generation and `nomic-embed-text:v1.5` for
+embeddings. The C1 adapter stores 512-dimensional Nomic MRL vectors in local
+Qdrant, with committed revisions and restart support. BM25 fusion, version
+counterparts, API wiring, and held-out evaluation remain pending.
 
 ### Tech stack
 | Component | Choice | Skeleton status |
@@ -19,9 +20,9 @@ remain pending. Combine ranked results through reciprocal rank fusion.
 | Interface | Streamlit | HTTP-backed mock chat |
 | Backend | Python / FastAPI / Pydantic | Typed routes and tool wiring |
 | Generation | Ollama `qwen3:4b` | Planned; no inference |
-| Embeddings | `qwen3:4b`, raw last-token pooling | Live adapter verified; API still mock |
-| Vector storage | Qdrant local persistent directory | Planned; no database |
-| Retrieval | BM25 first; semantic search pending | One fixed fixture |
+| Embeddings | `nomic-embed-text:v1.5`, 512-dimensional MRL profile | Live adapter implemented; API still mock |
+| Vector storage | Qdrant local persistent directory | C1 persistence and restart implemented |
+| Retrieval | Semantic search with scope filters; BM25 fusion pending | Opt-in C1 index; default API uses fixture |
 | Evaluation | Ragas with local Ollama and labelled checks | Planned; no scores |
 
 ### Team and ownership
@@ -60,7 +61,8 @@ silently substitute mocks. Cut polish before citations, conflicts, or evaluation
 | Local FastAPI + Streamlit | Agreed stack; no public deployment |
 | Python 3.13 and a pinned dependency lock | Match the verified setup across teammates |
 | `qwen3:4b` generation | User-selected; benchmark on the 4 GB GPU |
-| Only `qwen3:4b` for model calls | User instruction; no alternative embedding model |
+| Qwen generation and Nomic embeddings | Latest user-selected model split |
+| 512-dimensional Nomic MRL vectors | Smaller storage; eight synthetic development cases matched the full profile |
 | Qdrant local directory | User-selected persistence; backend owns the client |
 | Ragas outside interactive requests | User-selected evaluation without chat latency |
 | Mock-only first skeleton | Parallel work without external services/downloads |
@@ -106,13 +108,14 @@ Progress: `progress/member-b.md`.
 ## Person C — Retrieval and answers — edit only this section
 - [x] Shared contracts, ports, and mock fixtures exist.
 - [x] Retrieval, drafting, and verification stubs exist.
-- [ ] C1: Add local embeddings and backend-owned Qdrant persistence.
-  - [x] Enforce `qwen3:4b` only; validate real endpoint output and report runner setup errors.
-  - [x] Verify 2560-dimensional Qwen vectors using a separate embedding-only runner.
-  - [ ] Evaluate retrieval quality of the raw last-token profile with D.
-  - [ ] Persist passage vectors in Qdrant and verify restart.
+- [x] C1: Add local embeddings and backend-owned Qdrant persistence.
+  - [x] Use Nomic for embeddings; retain Qwen for generation only.
+  - [x] Implement the trained 512-dimensional MRL profile and index compatibility metadata.
+  - [x] Persist documents, passage locations, and revisions; reject incomplete writes.
+  - [x] Verify restart and compare 512/768 dimensions on eight synthetic development cases.
+  - Latest cleanup/documentation edits are unverified; user requested no further checks.
 - [ ] C2: Add BM25/semantic fusion, scope filters, and version counterparts.
-  - [ ] Start with BM25 lexical retrieval under the single-model policy.
+  - [ ] Add BM25 lexical ranking and fuse it with the C1 semantic results.
 - [ ] C3: Benchmark `qwen3:4b`; add grounded drafting and conflict/clarification logic.
 - [ ] C4: Add verification/fallback and index B's passages; expose tools to D.
   - [x] Reject inapplicable or invalid claim citations; verify API fallback with mocks.

@@ -1,29 +1,28 @@
 # Person C progress
 
-- Role: retrieval, answer generation, and shared contracts.
-- Model policy: only `qwen3:4b`. No alternative model is invoked or downloaded.
-- C1 fix: the prior capability-list guard was too strict. Ollama's default Qwen
-  runner also lacked embedding mode. Added the `embedding_server` launcher with
-  process-scoped embedding and last-token pooling flags on loopback port 11435.
-  Generation remains on the regular service at port 11434 using the same weights.
-- Adapter: validate the real embedding endpoint rather than reject missing static
-  capability metadata. Model identity, dimensions, vectors, and locking are checked.
-  Use CPU, context 1024, batch 64, no truncation, and one-minute keepalive.
-- Live verification: the project launcher and adapter generated two passage vectors
-  and one query vector, all 2560-dimensional, for synthetic inputs. Both services
-  report digest `359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7`.
-  The regular service completed a real generation request with HTTP 200 afterward.
-- C4 increment: invalid or inapplicable claim citations fail verification and trigger
-  the existing API fallback. A valid but inapplicable quote remains quote-valid.
-- Next: Qdrant persistence and BM25/semantic retrieval, followed by grounded Qwen
-  drafting. D must evaluate the experimental raw-vector profile's retrieval quality.
-- Handoff: D owns FastAPI, settings, dependency wiring, startup/readiness, and API
-  orchestration. Wire `EMBEDDING_OLLAMA_BASE_URL` separately and align the legacy
-  model defaults in `core/settings.py`. C has not edited D's files.
-- Verification: Python 3.13.18; all 55 tests passed (40 embedding cases, 14 citation
-  cases, and the mock chat smoke test). Ruff lint/format and `git diff --check`
-  passed. The real project launcher, adapter vectors, matching model digests, and
-  regular-service generation were verified. One existing dependency warning remains.
-- Limits: actual raw Qwen vectors are verified; semantic retrieval quality is not.
-  The API remains in mock mode; Qdrant, live answer integration, and evaluation
-  remain pending. No shared dependency pins or JSON shapes changed.
+- Focus: retrieval. Model split is Qwen `qwen3:4b` for generation and Nomic
+  `nomic-embed-text:v1.5` for embeddings, per the latest user instruction.
+- C1 implemented: native Nomic adapter, trained MRL reduction to 512 dimensions,
+  backend-owned local Qdrant storage, document/source preservation, committed
+  revisions, idempotent indexing, scoped semantic search, and restart support.
+- Compatibility: stored dimension/transform profile and model digest prevent
+  mixing incompatible vectors. Invalid input or embedding failures do not commit
+  a ready document; interrupted point writes stay outside committed search results.
+- Prior evidence: 65 retrieval tests passed before the no-check instruction.
+  A real Nomic run produced the expected first hit for all eight synthetic
+  development questions at both 768 and 512 dimensions. Fresh Python processes
+  reopened both indexes and performed new live queries with source excerpts intact.
+- Dimension choice: 512 float32 components take 2048 bytes instead of 3072 at 768.
+  This reduces vector storage/search work, not native model inference. Actual
+  measurements and limitations are recorded in `docs/c1-report.md`.
+- Removed the experimental raw-Qwen embedding launcher and stopped its task-owned
+  helper. The regular Ollama service handles both distinct models on port 11434.
+- C4 prior increment: invalid or inapplicable citations fail verification and
+  trigger the mock API's existing fallback; semantic verification is pending.
+- Handoff: B supplies Document/Passage records to `QdrantIndex.index_document`.
+  D owns API integration and one client per backend process. The default API
+  remains mock-only. No other person's implementation files were changed.
+- Next: C2 BM25 ranking, semantic fusion, and version counterparts. Broader
+  corpus/held-out evaluation and live API integration remain separate work.
+- Latest edits are unverified: the user requested no further tests, lint,
+  formatting, or verification checks. No such checks were run after that request.

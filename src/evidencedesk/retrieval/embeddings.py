@@ -5,11 +5,12 @@ from threading import Lock
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from evidencedesk.assistant.model_runtime import MODEL_REQUEST_LOCK
 from evidencedesk.contracts.models import EmbeddingInput, EmbeddingOutput, Envelope
 from evidencedesk.core.responses import failure, success
 
 EMBEDDING_MODEL = "nomic-embed-text:v1.5"
-_DEFAULT_REQUEST_LOCK = Lock()
+_DEFAULT_REQUEST_LOCK = MODEL_REQUEST_LOCK
 
 
 class _ModelTag(BaseModel):

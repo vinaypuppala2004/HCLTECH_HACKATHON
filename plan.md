@@ -94,16 +94,17 @@ Progress: `progress/member-a.md`.
 - [x] Ingestion/source-reader stubs and owned folders exist.
 - [ ] B1: Curate public sources and provenance; label synthetic fixtures.
 - [x] B2: Parse PDF, HTML, Markdown, and TXT with location preservation.
-- [ ] B3: Segment passages with headings, overlap, and stable source IDs.
+- [x] B3: Segment passages with headings, overlap, and stable source IDs.
 - [ ] B4: Report empty/corrupt inputs; send passages to C's indexing port.
 - [ ] B5: Verify formats and deduplication; share source IDs with D for labels.
 
-Person B phases map directly to B1–B5 above. This branch implements phase 2 only:
-in-memory parsers retain PDF page numbers, HTML/Markdown heading paths, and text
-source line ranges. Parser-local failures and format/size/page limits are tested;
-the public ingestion and source tools remain explicitly mocked. Phase 1 source
-curation is still pending. Phase 3 chunk sizes, overlap, and stable passage IDs
-have not started; indexing and deduplication remain in phases 4–5.
+Person B phases map directly to B1–B5 above. Phase 2 parsing is complete and
+preserves PDF pages, HTML/Markdown headings, and source line ranges. Phase 3 adds
+exact source slices with configurable character limits and overlap (defaults:
+1,200/200), deterministic document/passage IDs, and internal location records.
+Chunks never cross source blocks or pages. Output uses the existing contracts;
+public ingestion and source tools remain mocked. Phase 1 source curation is
+still pending; API/indexing integration and deduplication remain in phases 4–5.
 
 Acceptance: citation locations survive chunking; failed files never appear indexed.
 Progress: `progress/member-b.md`.
